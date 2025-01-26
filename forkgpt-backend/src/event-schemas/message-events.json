@@ -1,0 +1,231 @@
+{
+  "domain": "message",
+  "events": {
+    "message.list.requested": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "topicId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["topicId", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "message.list.fetched": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "topicId": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": ["user", "assistant"]
+                },
+                "parentId": {
+                  "type": ["string", "null"]
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "updatedAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "content",
+                "role",
+                "parentId",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["topicId", "messages"],
+        "additionalProperties": false
+      }
+    },
+    "message.create": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "assistant"]
+          },
+          "topicId": {
+            "type": "string"
+          },
+          "threadId": {
+            "type": ["string", "null"]
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["content", "role", "topicId", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "message.created": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "assistant"]
+          },
+          "parentId": {
+            "type": ["string", "null"]
+          },
+          "topicId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "content",
+          "role",
+          "parentId",
+          "topicId",
+          "userId",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "message.update": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "content", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "message.updated": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "content", "userId"],
+        "additionalProperties": false
+      }
+    },
+    "message.delete": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "message.deleted": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "userId"],
+        "additionalProperties": false
+      }
+    },
+    "message.aiResponse.requested": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string"
+          },
+          "topicId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["messageId", "topicId", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

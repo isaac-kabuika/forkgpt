@@ -1,0 +1,6 @@
+{
+  "schemaDir": "./src/event-schemas",
+  "outputDir": "./src/_generated/events",
+  "typePrefix": "",
+  "typeSuffix": "Event"
+}

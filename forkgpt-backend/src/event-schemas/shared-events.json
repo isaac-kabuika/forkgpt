@@ -1,0 +1,30 @@
+{
+  "domain": "shared",
+  "events": {
+    "timestamp.created": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "unix": {
+            "type": "number"
+          }
+        },
+        "required": ["unix"],
+        "additionalProperties": false
+      }
+    },
+    "helloMessage": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

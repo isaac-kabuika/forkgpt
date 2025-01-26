@@ -1,0 +1,160 @@
+{
+  "domain": "topic",
+  "events": {
+    "topic.list.requested": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "topic.list.fetched": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "updatedAt": {
+                  "type": "number"
+                }
+              },
+              "required": ["id", "title", "createdAt", "updatedAt"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["userId", "topics"],
+        "additionalProperties": false
+      }
+    },
+    "topic.create": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "accessToken": { "type": "string" }
+        },
+        "required": ["userId", "title", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "topic.created": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "number"
+          }
+        },
+        "required": ["id", "title", "userId", "createdAt"],
+        "additionalProperties": false
+      }
+    },
+    "topic.update": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "title", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "topic.updated": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "title", "userId"],
+        "additionalProperties": false
+      }
+    },
+    "topic.delete": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "topic.deleted": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "userId"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

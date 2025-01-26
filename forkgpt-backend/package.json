@@ -1,0 +1,40 @@
+{
+  "name": "forkgpt",
+  "version": "1.0.0",
+  "description": "AI chat app with tree history",
+  "scripts": {
+    "build": "rimraf ./dist && tsc",
+    "lint": "npx eslint ./src",
+    "start:dev": "npx nodemon",
+    "start:prod": "npm run build && node dist/index.js",
+    "gen:events": "npx safe-event",
+    "gen:supabase": "npx supabase gen types typescript --project-id hunzjucoesqenpbiqngq > src/_generated/database/database.types.ts",
+    "db:push": "npx supabase db push",
+    "db:generate": "npm run db:push && npm run gen:supabase"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/ajv": "^0.0.5",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "nodemon": "^3.1.9",
+    "rimraf": "^3.0.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.19.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.0",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "ajv": "^8.17.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.2",
+    "openai": "^4.77.0",
+    "safe-event": "^1.0.22",
+    "zod": "^3.24.1",
+    "forkgpt-api-types": "file:../forkgpt-api-types/forkgpt-api-types-1.0.17.tgz"
+  }
+}

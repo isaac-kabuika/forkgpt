@@ -1,0 +1,46 @@
+{
+  "domain": "llm",
+  "events": {
+    "llm.response.requested": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "enum": ["user", "assistant"]
+                },
+                "content": {
+                  "type": "string"
+                }
+              },
+              "required": ["role", "content"],
+              "additionalProperties": false
+            }
+          },
+          "requestorCorrelationId": {
+            "type": "string"
+          }
+        },
+        "required": ["messages", "requestorCorrelationId"],
+        "additionalProperties": false
+      }
+    },
+    "llm.response.generated": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": ["content"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

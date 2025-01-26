@@ -1,0 +1,59 @@
+{
+  "domain": "user",
+  "events": {
+    "user.profile.requested": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["userId"],
+        "additionalProperties": false
+      }
+    },
+    "user.profile.updated": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "isAnonymous": {
+            "type": "boolean"
+          }
+        },
+        "required": ["userId", "isAnonymous"],
+        "additionalProperties": false
+      }
+    },
+    "user.profile.fetched": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "isAnonymous": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "number"
+          },
+          "lastLoginAt": {
+            "type": "number"
+          }
+        },
+        "required": ["userId", "isAnonymous", "createdAt", "lastLoginAt"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

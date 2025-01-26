@@ -1,0 +1,347 @@
+{
+  "domain": "thread",
+  "events": {
+    "thread.list.requested": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "topicId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["topicId", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "thread.list.fetched": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "threads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "topicId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "leafMessageId": {
+                  "type": ["string", "null"]
+                },
+                "userId": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "updatedAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "topicId",
+                "name",
+                "leafMessageId",
+                "userId",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["threads"],
+        "additionalProperties": false
+      }
+    },
+    "thread.create": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "leafMessageId": {
+            "type": ["string", "null"]
+          },
+          "topicId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "topicId", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "thread.created": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "topicId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "leafMessageId": {
+            "type": ["string", "null"]
+          },
+          "userId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "topicId",
+          "name",
+          "leafMessageId",
+          "userId",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "thread.update": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "thread.updated": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "userId"],
+        "additionalProperties": false
+      }
+    },
+    "thread.delete": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "thread.deleted": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "userId"],
+        "additionalProperties": false
+      }
+    },
+    "thread.messages.requested": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["threadId", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "thread.messages.fetched": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "thread": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "topicId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "leafMessageId": {
+                "type": ["string", "null"]
+              },
+              "userId": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "number"
+              },
+              "updatedAt": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "topicId",
+              "name",
+              "leafMessageId",
+              "userId",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": ["user", "assistant"]
+                },
+                "parentId": {
+                  "type": ["string", "null"]
+                },
+                "topicId": {
+                  "type": "string"
+                },
+                "userId": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "number"
+                },
+                "updatedAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "content",
+                "role",
+                "parentId",
+                "topicId",
+                "userId",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["thread", "messages"],
+        "additionalProperties": false
+      }
+    },
+    "thread.updateLeaf": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "accessToken": {
+            "type": "string"
+          }
+        },
+        "required": ["threadId", "messageId", "userId", "accessToken"],
+        "additionalProperties": false
+      }
+    },
+    "thread.leafUpdated": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "threadId": {
+            "type": "string"
+          },
+          "messageId": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": ["threadId", "messageId", "userId"],
+        "additionalProperties": false
+      }
+    }
+  }
+}
