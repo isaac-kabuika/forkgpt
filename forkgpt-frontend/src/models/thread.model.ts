@@ -7,6 +7,7 @@ export interface Thread {
   name: string;
   leafMessageId: string | null;
   userId: string;
+  rank: number;
   createdAt: Date;
   updatedAt: Date;
 }

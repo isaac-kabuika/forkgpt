@@ -35,11 +35,8 @@ export function initThreadApi(app: Application) {
           callback: (data: ThreadListFetchedEventData) => {
             const response: ApiType.ThreadListResponse = {
               threads: data.payload.threads.map((thread) => ({
-                id: thread.id,
-                topicId: thread.topicId,
-                name: thread.name,
-                leafMessageId: thread.leafMessageId,
-                userId: thread.userId,
+                ...thread,
+                rank: thread.rank,
                 createdAt: new Date(thread.createdAt),
                 updatedAt: new Date(thread.updatedAt),
               })),
@@ -63,6 +60,33 @@ export function initThreadApi(app: Application) {
     }
   );
 
+  // Get thread
+  app.get("/api/threads/:id", async (req: Request, res: Response) => {
+    try {
+      const thread = await threadService.getThread(
+        req.user.accessToken,
+        req.params.id
+      );
+
+      if (!thread) {
+        throw new ThreadError(
+          ThreadErrorCode.THREAD_NOT_FOUND,
+          "Thread not found"
+        );
+      }
+
+      const response: ApiType.ThreadResponse = {
+        thread: {
+          ...thread,
+          rank: thread.rank,
+        },
+      };
+      res.json(response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  });
+
   // Get thread with messages
   app.get("/api/threads/:id/messages", async (req: Request, res: Response) => {
     try {
@@ -77,6 +101,7 @@ export function initThreadApi(app: Application) {
               name: data.payload.thread.name,
               leafMessageId: data.payload.thread.leafMessageId,
               userId: data.payload.thread.userId,
+              rank: data.payload.thread.rank,
               createdAt: new Date(data.payload.thread.createdAt),
               updatedAt: new Date(data.payload.thread.updatedAt),
             },
@@ -127,6 +152,7 @@ export function initThreadApi(app: Application) {
                 name: data.payload.name,
                 leafMessageId: data.payload.leafMessageId,
                 userId: data.payload.userId,
+                rank: data.payload.rank,
                 createdAt: new Date(data.payload.createdAt),
                 updatedAt: new Date(data.payload.createdAt),
               },
@@ -139,9 +165,8 @@ export function initThreadApi(app: Application) {
           event: threadEvents["thread.create"],
           correlationId: req.user.id,
           data: ThreadCreateEventData.from({
+            ...createData,
             topicId: req.params.topicId,
-            name: createData.name,
-            leafMessageId: createData.leafMessageId,
             userId: req.user.id,
             accessToken: req.user.accessToken,
           }),
@@ -183,6 +208,7 @@ export function initThreadApi(app: Application) {
               name: data.payload.name,
               leafMessageId: thread.leafMessageId,
               userId: data.payload.userId,
+              rank: data.payload.rank,
               createdAt: thread.createdAt,
               updatedAt: new Date(),
             },
@@ -197,6 +223,9 @@ export function initThreadApi(app: Application) {
         data: ThreadUpdateEventData.from({
           id: req.params.id,
           name: updateData.name,
+          rank: updateData.rank,
+          leftThreadId: updateData.leftThreadId,
+          rightThreadId: updateData.rightThreadId,
           userId: req.user.id,
           accessToken: req.user.accessToken,
         }),

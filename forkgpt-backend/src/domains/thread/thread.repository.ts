@@ -7,7 +7,9 @@ export interface ThreadRepository {
     userId: string,
     topicId: string,
     name: string,
-    leafMessageId: string | null
+    leafMessageId: string | null,
+    leftThreadId: string | null,
+    rightThreadId: string | null
   ): Promise<Thread>;
 
   getThread(access_token: string, threadId: string): Promise<Thread | null>;
@@ -19,7 +21,12 @@ export interface ThreadRepository {
   updateThread(
     access_token: string,
     threadId: string,
-    name: string
+    updates: {
+      name?: string;
+      rank?: number;
+      leftThreadId?: string | null;
+      rightThreadId?: string | null;
+    }
   ): Promise<Thread>;
 
   deleteThread(access_token: string, threadId: string): Promise<void>;

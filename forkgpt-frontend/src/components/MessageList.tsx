@@ -1,6 +1,7 @@
 import { useThreadMessages } from "../server-state/thread.hooks";
 import { useAppSelector } from "../client-state/hooks";
 import { Message } from "./Message";
+import { useEffect, useRef } from "react";
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
@@ -11,11 +12,21 @@ export function MessageList() {
   const { data: threadData, isLoading } = useThreadMessages(
     activeThreadId || ""
   );
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+  };
+
+  // Scroll when messages change or thread changes
+  useEffect(() => {
+    scrollToBottom();
+  }, [threadData?.messages, activeThreadId]);
 
   if (!activeThreadId) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500">
-        Select a thread to view messages
+        Select a tab to view messages
       </div>
     );
   }
@@ -59,6 +70,8 @@ export function MessageList() {
             </div>
           </div>
         ))}
+        {/* Invisible element to scroll to */}
+        <div ref={messagesEndRef} />
       </div>
     </div>
   );

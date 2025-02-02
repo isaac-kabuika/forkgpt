@@ -63,6 +63,7 @@ export type Database = {
           id: string
           leaf_message_id: string | null
           name: string
+          rank: number
           topic_id: string
           updated_at: string
           user_id: string
@@ -72,6 +73,7 @@ export type Database = {
           id?: string
           leaf_message_id?: string | null
           name: string
+          rank?: number
           topic_id: string
           updated_at?: string
           user_id: string
@@ -81,6 +83,7 @@ export type Database = {
           id?: string
           leaf_message_id?: string | null
           name?: string
+          rank?: number
           topic_id?: string
           updated_at?: string
           user_id?: string

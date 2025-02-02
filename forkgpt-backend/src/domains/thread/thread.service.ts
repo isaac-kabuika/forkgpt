@@ -45,6 +45,7 @@ export class ThreadService {
                 name: thread.name,
                 leafMessageId: thread.leafMessageId,
                 userId: thread.userId,
+                rank: thread.rank,
                 createdAt: thread.createdAt.getTime(),
                 updatedAt: thread.updatedAt.getTime(),
               })),
@@ -84,7 +85,9 @@ export class ThreadService {
             event.payload.userId,
             event.payload.topicId,
             event.payload.name,
-            event.payload.leafMessageId ?? null
+            event.payload.leafMessageId ?? null,
+            event.payload.leftThreadId ?? null,
+            event.payload.rightThreadId ?? null
           );
 
           EventBus.instance.emitEvent({
@@ -96,6 +99,7 @@ export class ThreadService {
               name: thread.name,
               leafMessageId: thread.leafMessageId,
               userId: thread.userId,
+              rank: thread.rank,
               createdAt: thread.createdAt.getTime(),
             }),
           });
@@ -119,7 +123,12 @@ export class ThreadService {
           const thread = await this.threadRepository.updateThread(
             event.payload.accessToken,
             event.payload.id,
-            event.payload.name
+            {
+              name: event.payload.name,
+              rank: event.payload.rank,
+              leftThreadId: event.payload.leftThreadId,
+              rightThreadId: event.payload.rightThreadId,
+            }
           );
 
           EventBus.instance.emitEvent({
@@ -129,6 +138,7 @@ export class ThreadService {
               id: thread.id,
               name: thread.name,
               userId: thread.userId,
+              rank: thread.rank,
             }),
           });
         } catch (error) {
@@ -209,6 +219,7 @@ export class ThreadService {
                 name: thread.name,
                 leafMessageId: thread.leafMessageId,
                 userId: thread.userId,
+                rank: thread.rank,
                 createdAt: thread.createdAt.getTime(),
                 updatedAt: thread.updatedAt.getTime(),
               },

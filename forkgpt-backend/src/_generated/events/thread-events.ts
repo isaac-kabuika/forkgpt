@@ -45,7 +45,7 @@ export class ThreadListRequestedEventData {
 }
 
 
-const ThreadListFetchedSchema = z.object({ "threads": z.array(z.object({ "id": z.string(), "topicId": z.string(), "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number() }).strict()) }).strict();
+const ThreadListFetchedSchema = z.object({ "threads": z.array(z.object({ "id": z.string(), "topicId": z.string(), "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number(), "rank": z.number() }).strict()) }).strict();
 
 export type ThreadListFetchedEventPayload = z.infer<typeof ThreadListFetchedSchema>;
 
@@ -70,7 +70,7 @@ export class ThreadListFetchedEventData {
 }
 
 
-const ThreadCreateSchema = z.object({ "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]).optional(), "topicId": z.string(), "userId": z.string(), "accessToken": z.string() }).strict();
+const ThreadCreateSchema = z.object({ "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]).optional(), "topicId": z.string(), "userId": z.string(), "accessToken": z.string(), "leftThreadId": z.union([z.string(), z.null()]).optional(), "rightThreadId": z.union([z.string(), z.null()]).optional() }).strict();
 
 export type ThreadCreateEventPayload = z.infer<typeof ThreadCreateSchema>;
 
@@ -95,7 +95,7 @@ export class ThreadCreateEventData {
 }
 
 
-const ThreadCreatedSchema = z.object({ "id": z.string(), "topicId": z.string(), "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]), "userId": z.string(), "createdAt": z.number() }).strict();
+const ThreadCreatedSchema = z.object({ "id": z.string(), "topicId": z.string(), "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]), "userId": z.string(), "createdAt": z.number(), "rank": z.number() }).strict();
 
 export type ThreadCreatedEventPayload = z.infer<typeof ThreadCreatedSchema>;
 
@@ -120,7 +120,7 @@ export class ThreadCreatedEventData {
 }
 
 
-const ThreadUpdateSchema = z.object({ "id": z.string(), "name": z.string(), "userId": z.string(), "accessToken": z.string() }).strict();
+const ThreadUpdateSchema = z.object({ "id": z.string(), "name": z.string().optional(), "rank": z.number().optional(), "userId": z.string(), "accessToken": z.string(), "leftThreadId": z.union([z.string(), z.null()]).optional(), "rightThreadId": z.union([z.string(), z.null()]).optional() }).strict();
 
 export type ThreadUpdateEventPayload = z.infer<typeof ThreadUpdateSchema>;
 
@@ -145,7 +145,7 @@ export class ThreadUpdateEventData {
 }
 
 
-const ThreadUpdatedSchema = z.object({ "id": z.string(), "name": z.string(), "userId": z.string() }).strict();
+const ThreadUpdatedSchema = z.object({ "id": z.string(), "name": z.string(), "userId": z.string(), "rank": z.number() }).strict();
 
 export type ThreadUpdatedEventPayload = z.infer<typeof ThreadUpdatedSchema>;
 
@@ -245,7 +245,7 @@ export class ThreadMessagesRequestedEventData {
 }
 
 
-const ThreadMessagesFetchedSchema = z.object({ "thread": z.object({ "id": z.string(), "topicId": z.string(), "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number() }).strict(), "messages": z.array(z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant"]), "parentId": z.union([z.string(), z.null()]), "topicId": z.string(), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number() }).strict()) }).strict();
+const ThreadMessagesFetchedSchema = z.object({ "thread": z.object({ "id": z.string(), "topicId": z.string(), "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number(), "rank": z.number() }).strict(), "messages": z.array(z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant"]), "parentId": z.union([z.string(), z.null()]), "topicId": z.string(), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number() }).strict()) }).strict();
 
 export type ThreadMessagesFetchedEventPayload = z.infer<typeof ThreadMessagesFetchedSchema>;
 

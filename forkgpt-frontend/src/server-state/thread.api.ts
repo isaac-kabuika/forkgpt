@@ -19,6 +19,11 @@ export const threadApi = {
     return response.data.threads;
   },
 
+  getThread: async (threadId: string) => {
+    const response = await api.get<Api.ThreadResponse>(`/threads/${threadId}`);
+    return response.data.thread;
+  },
+
   getThreadMessages: async (threadId: string) => {
     const response = await api.get<Api.ThreadWithMessages>(
       `/threads/${threadId}/messages`

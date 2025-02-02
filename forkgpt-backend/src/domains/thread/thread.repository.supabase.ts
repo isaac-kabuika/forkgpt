@@ -10,24 +10,62 @@ export class SupabaseThreadRepository implements ThreadRepository {
     userId: string,
     topicId: string,
     name: string,
-    leafMessageId: string | null
+    leafMessageId: string | null,
+    leftThreadId: string | null,
+    rightThreadId: string | null
   ): Promise<Thread> {
-    // If leafMessage is provided, verify it exists and belongs to this topic
-    if (leafMessageId) {
-      const { data: message, error: messageError } = await Supabase.client
-        .from("messages")
-        .select()
-        .eq("id", leafMessageId)
-        .eq("topic_id", topicId)
-        .single<Tables<"messages">>()
+    // Calculate new rank
+    let newRank: number;
+    if (leftThreadId && rightThreadId) {
+      // Insert between threads
+      const { data: threads, error: threadsError } = await Supabase.client
+        .from("threads")
+        .select("id,rank")
+        .in("id", [leftThreadId, rightThreadId])
+        .returns<Pick<Tables<"threads">, "id" | "rank">[]>()
         .setHeader("Authorization", `Bearer ${access_token}`);
 
-      if (messageError || !message) {
-        throw new ThreadError(
-          ThreadErrorCode.INVALID_PARENT_MESSAGE,
-          "Parent message not found or not accessible"
-        );
+      if (threadsError || !threads || threads.length !== 2) {
+        throw threadsError;
       }
+
+      const leftRank = threads.find((t) => t.id === leftThreadId)?.rank;
+      const rightRank = threads.find((t) => t.id === rightThreadId)?.rank;
+
+      if (!leftRank || !rightRank) {
+        throw threadsError;
+      }
+
+      newRank = (leftRank + rightRank) / 2;
+    } else if (!leftThreadId && !rightThreadId) {
+      // First thread in topic
+      newRank = 1000;
+    } else if (!rightThreadId) {
+      // Append to end
+      const { data: leftThread, error: leftError } = await Supabase.client
+        .from("threads")
+        .select("rank")
+        .eq("id", leftThreadId)
+        .single<Pick<Tables<"threads">, "rank">>()
+        .setHeader("Authorization", `Bearer ${access_token}`);
+
+      if (leftError || !leftThread) {
+        throw leftError;
+      }
+      newRank = leftThread.rank + 1000;
+    } else {
+      // !leftThreadId: Insert at start
+      const { data: rightThread, error: rightError } = await Supabase.client
+        .from("threads")
+        .select("rank")
+        .eq("id", rightThreadId)
+        .single<Pick<Tables<"threads">, "rank">>()
+        .setHeader("Authorization", `Bearer ${access_token}`);
+
+      if (rightError || !rightThread) {
+        throw rightError;
+      }
+      newRank = rightThread.rank / 2;
     }
 
     const { data, error } = await Supabase.client
@@ -36,12 +74,13 @@ export class SupabaseThreadRepository implements ThreadRepository {
         {
           topic_id: topicId,
           name,
-          user_id: userId,
           leaf_message_id: leafMessageId,
+          user_id: userId,
+          rank: newRank,
         },
-      ] as Tables<"threads">[])
+      ] satisfies Omit<Tables<"threads">, "id" | "created_at" | "updated_at">[])
       .select()
-      .single()
+      .single<Tables<"threads">>()
       .setHeader("Authorization", `Bearer ${access_token}`);
 
     if (error) {
@@ -51,7 +90,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
       );
     }
 
-    return this.mapDbThreadToDomain(data as Tables<"threads">);
+    return this.mapDbThreadToDomain(data);
   }
 
   async getThread(
@@ -102,7 +141,6 @@ export class SupabaseThreadRepository implements ThreadRepository {
         "Failed to fetch messages"
       );
     }
-    console.log(data);
     // Messages come ordered from root to leaf
     return data.map(this.mapDbMessageToDomain);
   }
@@ -112,7 +150,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
       .from("threads")
       .select()
       .eq("topic_id", topicId)
-      .order("created_at", { ascending: false })
+      .order("rank", { ascending: true })
       .returns<Tables<"threads">[]>()
       .setHeader("Authorization", `Bearer ${access_token}`);
 
@@ -129,11 +167,93 @@ export class SupabaseThreadRepository implements ThreadRepository {
   async updateThread(
     access_token: string,
     threadId: string,
-    name: string
+    updates: {
+      name?: string;
+      rank?: number;
+      leftThreadId?: string | null;
+      rightThreadId?: string | null;
+    }
   ): Promise<Thread> {
+    let newRank: number | undefined = updates.rank;
+
+    // If we need to calculate a new rank based on adjacent threads
+    if (
+      updates.leftThreadId !== undefined ||
+      updates.rightThreadId !== undefined
+    ) {
+      if (!updates.leftThreadId && !updates.rightThreadId) {
+        newRank = 1000;
+      } else if (!updates.rightThreadId) {
+        const { data: leftThread, error: leftError } = await Supabase.client
+          .from("threads")
+          .select("rank")
+          .eq("id", updates.leftThreadId)
+          .single<Pick<Tables<"threads">, "rank">>()
+          .setHeader("Authorization", `Bearer ${access_token}`);
+
+        if (leftError || !leftThread) {
+          throw new ThreadError(
+            ThreadErrorCode.THREAD_NOT_FOUND,
+            "Left thread not found"
+          );
+        }
+        newRank = leftThread.rank + 1000;
+      } else if (!updates.leftThreadId) {
+        const { data: rightThread, error: rightError } = await Supabase.client
+          .from("threads")
+          .select("rank")
+          .eq("id", updates.rightThreadId)
+          .single<Pick<Tables<"threads">, "rank">>()
+          .setHeader("Authorization", `Bearer ${access_token}`);
+
+        if (rightError || !rightThread) {
+          throw new ThreadError(
+            ThreadErrorCode.THREAD_NOT_FOUND,
+            "Right thread not found"
+          );
+        }
+        newRank = rightThread.rank / 2;
+      } else {
+        const { data: threads, error: threadsError } = await Supabase.client
+          .from("threads")
+          .select("id,rank")
+          .in("id", [updates.leftThreadId, updates.rightThreadId])
+          .returns<Pick<Tables<"threads">, "id" | "rank">[]>()
+          .setHeader("Authorization", `Bearer ${access_token}`);
+
+        if (threadsError || !threads || threads.length !== 2) {
+          throw new ThreadError(
+            ThreadErrorCode.THREAD_NOT_FOUND,
+            "Adjacent threads not found"
+          );
+        }
+
+        const leftRank = threads.find(
+          (t) => t.id === updates.leftThreadId
+        )?.rank;
+        const rightRank = threads.find(
+          (t) => t.id === updates.rightThreadId
+        )?.rank;
+
+        if (!leftRank || !rightRank) {
+          throw new ThreadError(
+            ThreadErrorCode.THREAD_NOT_FOUND,
+            "Adjacent threads not found"
+          );
+        }
+
+        newRank = (leftRank + rightRank) / 2;
+      }
+    }
+
+    const updateData = {
+      ...(updates.name && { name: updates.name }),
+      ...(newRank !== undefined && { rank: newRank }),
+    } satisfies Partial<Pick<Tables<"threads">, "name" | "rank">>;
+
     const { data, error } = await Supabase.client
       .from("threads")
-      .update({ name })
+      .update(updateData)
       .eq("id", threadId)
       .select()
       .single<Tables<"threads">>()
@@ -194,6 +314,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
       name: data.name,
       leafMessageId: data.leaf_message_id,
       userId: data.user_id,
+      rank: data.rank,
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
     };

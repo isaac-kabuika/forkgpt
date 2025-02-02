@@ -48,6 +48,9 @@
                 },
                 "updatedAt": {
                   "type": "number"
+                },
+                "rank": {
+                  "type": "number"
                 }
               },
               "required": [
@@ -57,7 +60,8 @@
                 "leafMessageId",
                 "userId",
                 "createdAt",
-                "updatedAt"
+                "updatedAt",
+                "rank"
               ],
               "additionalProperties": false
             }
@@ -85,6 +89,12 @@
           },
           "accessToken": {
             "type": "string"
+          },
+          "leftThreadId": {
+            "type": ["string", "null"]
+          },
+          "rightThreadId": {
+            "type": ["string", "null"]
           }
         },
         "required": ["name", "topicId", "userId", "accessToken"],
@@ -112,6 +122,9 @@
           },
           "createdAt": {
             "type": "number"
+          },
+          "rank": {
+            "type": "number"
           }
         },
         "required": [
@@ -120,7 +133,8 @@
           "name",
           "leafMessageId",
           "userId",
-          "createdAt"
+          "createdAt",
+          "rank"
         ],
         "additionalProperties": false
       }
@@ -135,14 +149,23 @@
           "name": {
             "type": "string"
           },
+          "rank": {
+            "type": "number"
+          },
           "userId": {
             "type": "string"
           },
           "accessToken": {
             "type": "string"
+          },
+          "leftThreadId": {
+            "type": ["string", "null"]
+          },
+          "rightThreadId": {
+            "type": ["string", "null"]
           }
         },
-        "required": ["id", "name", "userId", "accessToken"],
+        "required": ["id", "userId", "accessToken"],
         "additionalProperties": false
       }
     },
@@ -158,9 +181,12 @@
           },
           "userId": {
             "type": "string"
+          },
+          "rank": {
+            "type": "number"
           }
         },
-        "required": ["id", "name", "userId"],
+        "required": ["id", "name", "userId", "rank"],
         "additionalProperties": false
       }
     },
@@ -242,6 +268,9 @@
               },
               "updatedAt": {
                 "type": "number"
+              },
+              "rank": {
+                "type": "number"
               }
             },
             "required": [
@@ -251,7 +280,8 @@
               "leafMessageId",
               "userId",
               "createdAt",
-              "updatedAt"
+              "updatedAt",
+              "rank"
             ],
             "additionalProperties": false
           },

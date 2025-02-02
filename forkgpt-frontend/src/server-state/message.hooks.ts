@@ -29,6 +29,7 @@ export function useCreateMessage() {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
   const activeThreadId = useAppSelector((state) => state.thread.activeThreadId);
+  const userId = useAppSelector((state) => state.auth.user?.id);
 
   return useMutation({
     mutationFn: async ({
@@ -38,29 +39,79 @@ export function useCreateMessage() {
       topicId: string;
       content: string;
     }) => {
+      // Get current thread messages to find parent ID
+      const currentThread = queryClient.getQueryData<Api.ThreadWithMessages>(
+        threadKeys.messages(activeThreadId!)
+      );
+      const parentId = currentThread?.messages.length
+        ? currentThread.messages[currentThread.messages.length - 1].id
+        : null;
+
+      // Create optimistic message
+      const optimisticMessage: Api.Message = {
+        id: `temp-${Date.now()}`, // Temporary ID
+        content,
+        role: "user",
+        parentId,
+        topicId,
+        userId: userId!,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Add optimistic message to cache before the request
+      if (activeThreadId) {
+        queryClient.setQueryData<Api.ThreadWithMessages>(
+          threadKeys.messages(activeThreadId),
+          (old) => ({
+            ...old!,
+            messages: [...(old?.messages || []), optimisticMessage],
+          })
+        );
+      }
+
+      // Make the actual API call
       return messageApi.createMessage(topicId, {
         content,
         threadId: activeThreadId,
       });
     },
     onSuccess: (newMessage: Api.Message) => {
-      // Update thread messages cache
       if (activeThreadId) {
-        queryClient.setQueryData(
+        // Replace optimistic message with real one and invalidate to get AI response
+        queryClient.setQueryData<Api.ThreadWithMessages>(
           threadKeys.messages(activeThreadId),
-          (
-            old: { thread: Api.Thread; messages: Api.Message[] } | undefined
-          ) => ({
-            ...old,
-            thread: old?.thread || null,
-            messages: [...(old?.messages || []), newMessage],
+          (old) => ({
+            ...old!,
+            messages:
+              old?.messages.map((msg) =>
+                msg.id.startsWith("temp-") ? newMessage : msg
+              ) || [],
           })
         );
+
+        // Invalidate to get the AI response
+        queryClient.invalidateQueries({
+          queryKey: threadKeys.messages(activeThreadId),
+        });
       }
 
       // Set as active message
       dispatch(setActiveMessage(newMessage.id));
       dispatch(setActivePath([newMessage.id]));
+    },
+    onError: () => {
+      // Remove optimistic message on error
+      if (activeThreadId) {
+        queryClient.setQueryData<Api.ThreadWithMessages>(
+          threadKeys.messages(activeThreadId),
+          (old) => ({
+            ...old!,
+            messages:
+              old?.messages.filter((msg) => !msg.id.startsWith("temp-")) || [],
+          })
+        );
+      }
     },
   });
 }

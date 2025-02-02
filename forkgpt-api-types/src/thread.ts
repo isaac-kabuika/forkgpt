@@ -8,6 +8,7 @@ export const threadSchema = z.object({
   name: z.string().min(1),
   leafMessageId: z.string().uuid().nullable(),
   userId: z.string().uuid(),
+  rank: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -17,11 +18,16 @@ export type Thread = z.infer<typeof threadSchema>;
 export const createThreadRequestSchema = z.object({
   name: z.string().min(1),
   leafMessageId: z.string().uuid().nullable(),
+  leftThreadId: z.string().uuid().nullable(),
+  rightThreadId: z.string().uuid().nullable(),
 });
 export type CreateThreadRequest = z.infer<typeof createThreadRequestSchema>;
 
 export const updateThreadRequestSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().min(1).optional(),
+  rank: z.number().optional(),
+  leftThreadId: z.string().uuid().nullable().optional(),
+  rightThreadId: z.string().uuid().nullable().optional(),
 });
 export type UpdateThreadRequest = z.infer<typeof updateThreadRequestSchema>;
 

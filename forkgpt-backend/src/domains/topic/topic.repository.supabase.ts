@@ -94,7 +94,6 @@ export class SupabaseTopicRepository implements TopicRepository {
       .setHeader("Authorization", `Bearer ${access_token}`);
 
     if (error) {
-      console.log(">>>", error);
       throw new TopicError(
         TopicErrorCode.UNAUTHORIZED,
         "Failed to list topics"
