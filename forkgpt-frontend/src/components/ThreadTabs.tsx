@@ -140,7 +140,6 @@ export function ThreadTabs() {
   );
 
   const [localThreads, setLocalThreads] = useState<Thread[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
 
   // Add topic change detection
   const prevTopicId = useRef(activeTopicId);
@@ -153,7 +152,7 @@ export function ThreadTabs() {
 
   // Update synchronization logic
   useEffect(() => {
-    if (threads && !isDragging) {
+    if (threads) {
       const serverIds = threads.map((t) => t.id).join(",");
       const localIds = localThreads.map((t) => t.id).join(",");
 
@@ -161,7 +160,7 @@ export function ThreadTabs() {
         setLocalThreads(threads);
       }
     }
-  }, [threads, isDragging]); // Sync when threads update and not dragging
+  }, [threads]); // Removed isDragging dependency
 
   // Add container measurement and scroll adjustment
   const navRef = useRef<HTMLDivElement>(null);
@@ -227,19 +226,19 @@ export function ThreadTabs() {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    setIsDragging(true);
     const { active, over } = event;
     if (!over) return;
 
+    // Immediate local state update
     const oldIndex = localThreads.findIndex((t) => t.id === active.id);
     const newIndex = localThreads.findIndex((t) => t.id === over.id);
 
     if (oldIndex === newIndex) return;
 
     const newThreads = arrayMove([...localThreads], oldIndex, newIndex);
-    setLocalThreads(newThreads);
+    setLocalThreads(newThreads); // Optimistic update
 
-    // Get neighbors from the reordered array
+    // Async server update
     const thread = newThreads[newIndex];
     const leftThread = newThreads[newIndex - 1];
     const rightThread = newThreads[newIndex + 1];
@@ -250,7 +249,6 @@ export function ThreadTabs() {
       leftThreadId: leftThread?.id || null,
       rightThreadId: rightThread?.id || null,
     });
-    setIsDragging(false);
   };
 
   return (
@@ -259,7 +257,6 @@ export function ThreadTabs() {
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragEnd={handleDragEnd}
-        onDragStart={() => setIsDragging(true)}
         modifiers={[]}
         autoScroll={{ threshold: { x: 0.1, y: 0.1 } }}
       >
