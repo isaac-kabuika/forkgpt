@@ -10,11 +10,110 @@ import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useQueryParams } from "../hooks/useQueryParams";
 import { Thread } from "../models/thread.model";
 import { threadApi } from "../server-state/thread.api";
-import { DragEvent, useState } from "react";
+import { DragEvent, useState, useEffect, useRef } from "react";
+import {
+  DndContext,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  rectIntersection,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
+import React from "react";
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
 }
+
+// Add sortable item component
+const SortableItem = React.memo(
+  ({
+    thread,
+    onDelete,
+    onBranch,
+    activeThreadId,
+    onSelect,
+  }: {
+    thread: Thread;
+    onDelete: (id: string) => void;
+    onBranch: (thread: Thread) => void;
+    activeThreadId: string | null;
+    onSelect: (id: string) => void;
+  }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: thread.id });
+
+    const style = {
+      transform: CSS.Translate.toString(transform),
+      transition: "none",
+      zIndex: isDragging ? 20 : "auto",
+      opacity: isDragging ? 0.9 : 1,
+      flex: "0 0 auto",
+      width: "auto",
+    };
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="group relative flex items-center px-2"
+        {...attributes}
+        data-id={thread.id}
+        role="button"
+      >
+        <div className="flex items-center " {...listeners}>
+          <button
+            onClick={() => {
+              onSelect(thread.id);
+            }}
+            className={classNames(
+              thread.id === activeThreadId
+                ? "text-blue-600 bg-blue-50"
+                : "text-gray-600 hover:bg-gray-100",
+              " py-1.5 text-sm font-medium rounded-md px-2 transition-colors"
+            )}
+          >
+            <span className="line-clamp-1">{thread.name}</span>
+          </button>
+        </div>
+
+        <div className="flex items-center pl-2">
+          <button
+            onClick={() => onBranch(thread)}
+            className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
+            title="Branch from this thread"
+          >
+            <PlusIcon className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => onDelete(thread.id)}
+            className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
+            title="Delete thread"
+          >
+            <XMarkIcon className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+);
 
 export function ThreadTabs() {
   const activeTopicId = useAppSelector((state) => state.topic.activeTopicId);
@@ -25,7 +124,31 @@ export function ThreadTabs() {
   const { mutate: updateThread } = useUpdateThread();
   const dispatch = useAppDispatch();
   const { setThreadId } = useQueryParams();
-  const [draggedThread, setDraggedThread] = useState<Thread | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+        delay: 0,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const [localThreads, setLocalThreads] = useState<Thread[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Initialize once when threads load
+  useEffect(() => {
+    if (threads && localThreads.length === 0) {
+      setLocalThreads(threads);
+    }
+  }, [threads]); // Only run once when threads first load
+
+  // Add container measurement and scroll adjustment
+  const navRef = useRef<HTMLDivElement>(null);
 
   if (!activeTopicId) {
     return null;
@@ -75,8 +198,7 @@ export function ThreadTabs() {
     });
   };
 
-  const handleDeleteThread = (threadId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteThread = (threadId: string) => {
     if (window.confirm("Are you sure you want to delete this thread?")) {
       deleteThread(threadId);
       setThreadId(null);
@@ -84,100 +206,76 @@ export function ThreadTabs() {
   };
 
   const handleThreadClick = (threadId: string) => {
+    console.log("was here");
     dispatch(setActiveThread(threadId));
     setThreadId(threadId);
   };
 
-  const handleDragStart = (thread: Thread, e: DragEvent<HTMLDivElement>) => {
-    setDraggedThread(thread);
-    e.dataTransfer.effectAllowed = "move";
-  };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
 
-  const handleDragOver = (thread: Thread, e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
+    const oldIndex = localThreads.findIndex((t) => t.id === active.id);
+    const newIndex = localThreads.findIndex((t) => t.id === over.id);
 
-  const handleDrop = (targetThread: Thread, e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!draggedThread || draggedThread.id === targetThread.id) return;
+    if (oldIndex === newIndex) return;
 
-    // Find adjacent threads for new position
-    const threadList = threads || [];
-    const targetIndex = threadList.findIndex((t) => t.id === targetThread.id);
+    const newThreads = arrayMove([...localThreads], oldIndex, newIndex);
+    setLocalThreads(newThreads);
 
-    // Get left and right threads for the new position
-    const leftThreadId =
-      targetIndex > 0 ? threadList[targetIndex - 1].id : null;
-    const rightThreadId =
-      targetIndex < threadList.length - 1 ? threadList[targetIndex].id : null;
+    // Get neighbors from the reordered array
+    const thread = newThreads[newIndex];
+    const leftThread = newThreads[newIndex - 1];
+    const rightThread = newThreads[newIndex + 1];
 
     updateThread({
-      threadId: draggedThread.id,
-      name: draggedThread.name,
-      leftThreadId,
-      rightThreadId,
+      threadId: thread.id,
+      name: thread.name,
+      leftThreadId: leftThread?.id || null,
+      rightThreadId: rightThread?.id || null,
     });
-
-    setDraggedThread(null);
   };
 
   return (
-    <div className="border-b border-gray-200">
-      <div className="flex items-center px-4">
-        <nav className="flex flex-1 overflow-x-auto py-2" aria-label="Threads">
-          {threads?.map((thread) => (
-            <div
-              key={thread.id}
-              draggable
-              onDragStart={(e) => handleDragStart(thread, e)}
-              onDragOver={(e) => handleDragOver(thread, e)}
-              onDrop={(e) => handleDrop(thread, e)}
-              className={classNames(
-                "group relative flex items-center cursor-move",
-                "first:before:hidden before:content-[''] before:h-5 before:w-[2px] before:bg-gray-300 before:mx-4 before:self-center"
-              )}
+    <div className="thread-tabs-container">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragEnd={handleDragEnd}
+        modifiers={[]}
+        autoScroll={{ threshold: { x: 0.1, y: 0.1 } }}
+      >
+        <SortableContext
+          items={localThreads.map((t) => t.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div className="flex items-center justify-between">
+            <nav
+              ref={navRef}
+              className="flex flex-1 overflow-x-auto flex-nowrap gap-px p-2 bg-gray-50/50 rounded-xl scrollbar-hide"
+              aria-label="Threads"
             >
-              <button
-                onClick={() => handleThreadClick(thread.id)}
-                className={classNames(
-                  thread.id === activeThreadId
-                    ? "bg-gray-100 text-gray-900"
-                    : "text-gray-500 hover:text-gray-700",
-                  "px-3 py-2 text-sm font-medium rounded-md whitespace-nowrap flex items-center gap-2"
-                )}
-              >
-                <span>{thread.name}</span>
-              </button>
-              <div className="flex gap-4 items-center">
-                <button
-                  onClick={(e) => handleDeleteThread(thread.id, e)}
-                  className="p-0.5 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-md ml-1"
-                  title="Delete thread"
-                >
-                  <XMarkIcon className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleBranchThread(thread)}
-                  className="p-0.5 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-md ml-1"
-                  title="Branch from this thread"
-                >
-                  <PlusIcon className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </nav>
-        {(!threads || threads.length === 0) && (
-          <button
-            onClick={handleNewThread}
-            className="ml-4 p-2 text-gray-400 hover:text-gray-600"
-            title="New Thread"
-          >
-            <PlusIcon className="w-5 h-5" />
-          </button>
-        )}
-      </div>
+              {localThreads.map((thread) => (
+                <SortableItem
+                  key={thread.id}
+                  thread={thread}
+                  onDelete={handleDeleteThread}
+                  onBranch={handleBranchThread}
+                  activeThreadId={activeThreadId}
+                  onSelect={handleThreadClick}
+                />
+              ))}
+            </nav>
+            <button
+              onClick={handleNewThread}
+              className="ml-4 p-2 text-gray-400 hover:text-gray-600"
+              title="New Thread"
+            >
+              <PlusIcon className="w-5 h-5" />
+            </button>
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }

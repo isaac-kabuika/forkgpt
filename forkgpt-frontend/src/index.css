@@ -46,13 +46,13 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
-button:hover {
+/* button:hover {
   border-color: #646cff;
-}
-button:focus,
+} */
+/* button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
-}
+} */
 
 @media (prefers-color-scheme: light) {
   :root {
@@ -65,4 +65,62 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+/* Add to your global CSS */
+[role="button"] {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  min-width: auto;
+  max-width: none;
+  padding: 0;
+  margin: 0 4px;
+}
+
+[role="button"] span {
+  @apply truncate;
+}
+
+.tab-scroll-container {
+  gap: 0;
+  padding: 8px 4px;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Add container constraints */
+.thread-tabs-container {
+  @apply max-w-full px-4;
+}
+
+.drag-handle:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 8px;
+}
+
+/* Add subtle separation between tabs */
+.group:not(:first-child) {
+  margin-left: -1px;
+}
+
+/* Improve drag preview positioning */
+[data-dragging="true"] {
+  opacity: 0.8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Dynamic width adjustment */
+@media (max-width: 640px) {
+  [role="button"] {
+    min-width: 120px;
+    max-width: 180px;
+  }
+}
+
+[role="button"]:hover {
+  transform: none;
+  z-index: auto;
 }
