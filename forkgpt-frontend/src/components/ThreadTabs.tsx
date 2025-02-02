@@ -10,7 +10,7 @@ import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useQueryParams } from "../hooks/useQueryParams";
 import { Thread } from "../models/thread.model";
 import { threadApi } from "../server-state/thread.api";
-import { DragEvent, useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DndContext,
   closestCorners,
@@ -19,7 +19,6 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  rectIntersection,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -29,7 +28,6 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import React from "react";
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
@@ -51,14 +49,8 @@ const SortableItem = React.memo(
     activeThreadId: string | null;
     onSelect: (id: string) => void;
   }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: thread.id });
+    const { attributes, listeners, setNodeRef, transform, isDragging } =
+      useSortable({ id: thread.id });
 
     const style = {
       transform: CSS.Translate.toString(transform),
@@ -107,7 +99,7 @@ const SortableItem = React.memo(
             <PlusIcon className="w-4 h-4" />
           </button>
           <button
-            onClick={(e) => onDelete(thread.id)}
+            onClick={() => onDelete(thread.id)}
             className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
             title="Delete thread"
           >
