@@ -78,16 +78,20 @@ const SortableItem = React.memo(
         data-id={thread.id}
         role="button"
       >
-        <div className="flex items-center " {...listeners}>
+        <div
+          className="flex items-center flex-1"
+          {...listeners}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(thread.id);
+          }}
+        >
           <button
-            onClick={() => {
-              onSelect(thread.id);
-            }}
             className={classNames(
               thread.id === activeThreadId
                 ? "text-blue-600 bg-blue-50"
                 : "text-gray-600 hover:bg-gray-100",
-              " py-1.5 text-sm font-medium rounded-md px-2 transition-colors"
+              "w-full text-left py-1.5 px-2 text-sm rounded-md transition-colors"
             )}
           >
             <span className="line-clamp-1">{thread.name}</span>
@@ -127,9 +131,7 @@ export function ThreadTabs() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
-        delay: 0,
-        tolerance: 5,
+        distance: 1,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -140,12 +142,26 @@ export function ThreadTabs() {
   const [localThreads, setLocalThreads] = useState<Thread[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Initialize once when threads load
+  // Add topic change detection
+  const prevTopicId = useRef(activeTopicId);
   useEffect(() => {
-    if (threads && localThreads.length === 0) {
-      setLocalThreads(threads);
+    if (activeTopicId !== prevTopicId.current) {
+      setLocalThreads([]);
+      prevTopicId.current = activeTopicId;
     }
-  }, [threads]); // Only run once when threads first load
+  }, [activeTopicId]);
+
+  // Update synchronization logic
+  useEffect(() => {
+    if (threads && !isDragging) {
+      const serverIds = threads.map((t) => t.id).join(",");
+      const localIds = localThreads.map((t) => t.id).join(",");
+
+      if (serverIds !== localIds) {
+        setLocalThreads(threads);
+      }
+    }
+  }, [threads, isDragging]); // Sync when threads update and not dragging
 
   // Add container measurement and scroll adjustment
   const navRef = useRef<HTMLDivElement>(null);
@@ -206,12 +222,12 @@ export function ThreadTabs() {
   };
 
   const handleThreadClick = (threadId: string) => {
-    console.log("was here");
     dispatch(setActiveThread(threadId));
     setThreadId(threadId);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    setIsDragging(true);
     const { active, over } = event;
     if (!over) return;
 
@@ -234,6 +250,7 @@ export function ThreadTabs() {
       leftThreadId: leftThread?.id || null,
       rightThreadId: rightThread?.id || null,
     });
+    setIsDragging(false);
   };
 
   return (
@@ -242,6 +259,7 @@ export function ThreadTabs() {
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragEnd={handleDragEnd}
+        onDragStart={() => setIsDragging(true)}
         modifiers={[]}
         autoScroll={{ threshold: { x: 0.1, y: 0.1 } }}
       >
