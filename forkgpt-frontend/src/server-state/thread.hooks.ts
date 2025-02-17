@@ -7,6 +7,7 @@ import { Thread, mapThread } from "../models/thread.model";
 import { useQueryParams } from "../hooks/useQueryParams";
 import { supabase } from "../supabase";
 import { useEffect } from "react";
+import { setLastThreadForTopic } from "../client-state/slices/threadHistorySlice";
 
 const TEMP_THREAD_ID = "temp_thread_id";
 
@@ -39,7 +40,8 @@ export function useThreadMessages(threadId: string) {
   const messagesQuery = useQuery({
     queryKey: threadKeys.messages(threadId),
     queryFn: () => threadApi.getThreadMessages(threadId),
-    enabled: !!threadId && !isTempThread, // Prevent fetch for temp IDs
+    enabled: !!threadId && !isTempThread,
+    staleTime: 0, // Force immediate refresh when activated
   });
 
   // Modify subscription effect
@@ -100,12 +102,14 @@ export function useCreateThread() {
       leafMessageId,
       leftThreadId,
       rightThreadId,
+      newMessageContent,
     }: {
       topicId: string;
       name: string;
       leafMessageId?: string;
       leftThreadId?: string;
       rightThreadId?: string;
+      newMessageContent: string;
     }) => {
       dispatch(setActiveThread(null));
 
@@ -115,6 +119,7 @@ export function useCreateThread() {
           leafMessageId: leafMessageId ?? null,
           leftThreadId: leftThreadId ?? null,
           rightThreadId: rightThreadId ?? null,
+          newMessageContent: newMessageContent,
         })),
         TEMP_THREAD_ID,
       };
@@ -164,22 +169,36 @@ export function useCreateThread() {
 
       return { previousThreads, tempId: TEMP_THREAD_ID };
     },
-    onSuccess: (realThread, variables, context) => {
+    onSuccess: (realThread, variables, _) => {
       // Replace optimistic thread with real data
       queryClient.setQueryData<Thread[]>(
         threadKeys.list(variables.topicId),
         (old = []) =>
           old
-            .map((t) => (t.id === context.tempId ? realThread : t))
+            .filter((t) => t.id !== TEMP_THREAD_ID)
+            .concat(realThread)
             .sort((a, b) => a.rank - b.rank)
       );
+
+      // Force immediate update of active thread
       dispatch(setActiveThread(realThread.id));
       setThreadId(realThread.id);
-      // Update active thread to real ID: There is a weird bug (not updating active tab) that's fixed when we update active twice with delay.
-      setTimeout(() => {
-        dispatch(setActiveThread(realThread.id));
-        setThreadId(realThread.id);
+
+      // Invalidate and refetch all related queries
+      queryClient.invalidateQueries({
+        queryKey: threadKeys.messages(realThread.id),
       });
+      queryClient.invalidateQueries({
+        queryKey: threadKeys.list(variables.topicId),
+      });
+
+      // Update thread history
+      dispatch(
+        setLastThreadForTopic({
+          topicId: variables.topicId,
+          threadId: realThread.id,
+        })
+      );
     },
     onError: (_, variables, context) => {
       // Rollback optimistic update

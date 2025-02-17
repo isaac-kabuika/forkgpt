@@ -70,7 +70,7 @@ export class ThreadListFetchedEventData {
 }
 
 
-const ThreadCreateSchema = z.object({ "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]).optional(), "topicId": z.string(), "userId": z.string(), "accessToken": z.string(), "leftThreadId": z.union([z.string(), z.null()]).optional(), "rightThreadId": z.union([z.string(), z.null()]).optional() }).strict();
+const ThreadCreateSchema = z.object({ "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]).optional(), "topicId": z.string(), "userId": z.string(), "accessToken": z.string(), "leftThreadId": z.union([z.string(), z.null()]).optional(), "rightThreadId": z.union([z.string(), z.null()]).optional(), "newMessageContent": z.string() }).strict();
 
 export type ThreadCreateEventPayload = z.infer<typeof ThreadCreateSchema>;
 

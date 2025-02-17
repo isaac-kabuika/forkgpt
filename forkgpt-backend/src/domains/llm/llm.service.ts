@@ -21,9 +21,12 @@ export class LlmService {
   private initializeEventHandlers() {
     EventBus.instance.onEvent({
       event: llmEvents["llm.response.requested"],
-      callback: async (event: LlmResponseRequestedEventData) => {
+      callback: async (
+        event: LlmResponseRequestedEventData,
+        llmResponseRequestedCorrelationId
+      ) => {
         const completion = await OpenAi.client.chat.completions.create({
-          model: OpenAi.model,
+          model: event.payload.model ?? OpenAi.model,
           messages: event.payload.messages.map((msg) => ({
             role: msg.role,
             content: msg.content,
@@ -31,7 +34,7 @@ export class LlmService {
         });
         EventBus.instance.emitEvent({
           event: llmEvents["llm.response.generated"],
-          correlationId: event.payload.requestorCorrelationId,
+          correlationId: llmResponseRequestedCorrelationId,
           data: LlmResponseGeneratedEventData.from({
             content: completion.choices[0].message.content!,
           }),

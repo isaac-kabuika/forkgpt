@@ -1,15 +1,13 @@
 import {
   useThreads,
-  useCreateThread,
   useDeleteThread,
   useUpdateThread,
 } from "../server-state/thread.hooks";
 import { useAppSelector, useAppDispatch } from "../client-state/hooks";
 import { setActiveThread } from "../client-state/slices/threadSlice";
-import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useQueryParams } from "../hooks/useQueryParams";
 import { Thread } from "../models/thread.model";
-import { threadApi } from "../server-state/thread.api";
 import { useState, useEffect, useRef } from "react";
 import {
   DndContext,
@@ -39,13 +37,11 @@ const SortableItem = React.memo(
   ({
     thread,
     onDelete,
-    onBranch,
     activeThreadId,
     onSelect,
   }: {
     thread: Thread;
     onDelete: (id: string) => void;
-    onBranch: (thread: Thread) => void;
     activeThreadId: string | null;
     onSelect: (id: string) => void;
   }) => {
@@ -65,7 +61,7 @@ const SortableItem = React.memo(
       <div
         ref={setNodeRef}
         style={style}
-        className="group relative flex items-center px-2"
+        className="group relative flex items-center px-2 gap-1"
         {...attributes}
         data-id={thread.id}
         role="button"
@@ -81,29 +77,22 @@ const SortableItem = React.memo(
           <button
             className={classNames(
               thread.id === activeThreadId
-                ? "text-blue-600 bg-blue-50"
-                : "text-gray-600 hover:bg-gray-100",
-              "w-full text-left py-1.5 px-2 text-sm rounded-md transition-colors"
+                ? "text-blue-700 bg-blue-100"
+                : "text-gray-600 hover:bg-blue-50",
+              "w-full flex justify-between items-center py-1.5 px-2 text-sm rounded-md transition-colors"
             )}
           >
             <span className="line-clamp-1">{thread.name}</span>
-          </button>
-        </div>
-
-        <div className="flex items-center pl-2">
-          <button
-            onClick={() => onBranch(thread)}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
-            title="Branch from this thread"
-          >
-            <PlusIcon className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => onDelete(thread.id)}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
-            title="Delete thread"
-          >
-            <XMarkIcon className="w-4 h-4" />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(thread.id);
+              }}
+              className="ml-2 text-gray-400 hover:text-gray-600"
+              title="Delete thread"
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
           </button>
         </div>
       </div>
@@ -115,7 +104,6 @@ export function ThreadTabs() {
   const activeTopicId = useAppSelector((state) => state.topic.activeTopicId);
   const activeThreadId = useAppSelector((state) => state.thread.activeThreadId);
   const { data: threads, isLoading } = useThreads(activeTopicId || "");
-  const { mutate: createThread } = useCreateThread();
   const { mutate: deleteThread } = useDeleteThread();
   const { mutate: updateThread } = useUpdateThread();
   const dispatch = useAppDispatch();
@@ -157,6 +145,15 @@ export function ThreadTabs() {
   // Add container measurement and scroll adjustment
   const navRef = useRef<HTMLDivElement>(null);
 
+  // Add this useEffect
+  useEffect(() => {
+    if (threads?.length && !activeThreadId) {
+      const lastThread = threads[threads.length - 1];
+      dispatch(setActiveThread(lastThread.id));
+      setThreadId(lastThread.id);
+    }
+  }, [threads, activeThreadId, dispatch, setThreadId]);
+
   if (!activeTopicId) {
     return null;
   }
@@ -168,42 +165,6 @@ export function ThreadTabs() {
       </div>
     );
   }
-
-  const handleNewThread = () => {
-    if (threads && threads.length === 0) {
-      dispatch(setActiveThread(null));
-      setThreadId(null);
-      createThread({
-        topicId: activeTopicId,
-        name: "New Thread",
-      });
-    }
-  };
-
-  const handleBranchThread = async (parentThread: Thread) => {
-    // Get the latest thread data to ensure we have the current leaf message ID
-    const latestThread = await threadApi.getThread(parentThread.id);
-
-    const threadList = threads || [];
-    const leftThreadIdIndex = threadList.findIndex(
-      (t) => t.id === latestThread.id
-    );
-
-    // Get left and right threads for the new position
-    const leftThreadId = threadList[leftThreadIdIndex].id;
-    const rightThreadId =
-      leftThreadIdIndex < threadList.length - 1
-        ? threadList[leftThreadIdIndex + 1].id
-        : undefined;
-
-    createThread({
-      topicId: activeTopicId,
-      name: `${parentThread.name} (branch)`,
-      leafMessageId: latestThread.leafMessageId ?? undefined,
-      leftThreadId,
-      rightThreadId,
-    });
-  };
 
   const handleDeleteThread = (threadId: string) => {
     if (window.confirm("Are you sure you want to delete this thread?")) {
@@ -256,7 +217,7 @@ export function ThreadTabs() {
           items={localThreads.map((t) => t.id)}
           strategy={rectSortingStrategy}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <nav
               ref={navRef}
               className="flex flex-1 overflow-x-auto flex-nowrap gap-px p-2 bg-gray-50/50 rounded-xl scrollbar-hide"
@@ -267,19 +228,11 @@ export function ThreadTabs() {
                   key={thread.id}
                   thread={thread}
                   onDelete={handleDeleteThread}
-                  onBranch={handleBranchThread}
                   activeThreadId={activeThreadId}
                   onSelect={handleThreadClick}
                 />
               ))}
             </nav>
-            <button
-              onClick={handleNewThread}
-              className="ml-4 p-2 text-gray-400 hover:text-gray-600"
-              title="New Thread"
-            >
-              <PlusIcon className="w-5 h-5" />
-            </button>
           </div>
         </SortableContext>
       </DndContext>

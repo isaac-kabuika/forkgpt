@@ -16,6 +16,17 @@ import {
 } from "../../_generated/events/thread-events";
 import { ThreadRepository } from "./thread.repository";
 import { ThreadError, ThreadErrorCode } from "./thread.types";
+import {
+  llmEvents,
+  LlmResponseGeneratedEventData,
+  LlmResponseRequestedEventData,
+} from "../../_generated/events/llm-events";
+import { randomUUID } from "crypto";
+import {
+  MessageCreatedEventData,
+  MessageCreateEventData,
+  messageEvents,
+} from "../../_generated/events/message-events";
 
 export class ThreadService {
   constructor(private readonly threadRepository: ThreadRepository) {}
@@ -30,10 +41,10 @@ export class ThreadService {
       event: threadEvents["thread.list.requested"],
       callback: async (event: ThreadListRequestedEventData) => {
         try {
-          const threads = await this.threadRepository.listThreads(
-            event.payload.accessToken,
-            event.payload.topicId
-          );
+          const threads = await this.threadRepository.listThreads({
+            accessToken: event.payload.accessToken,
+            topicId: event.payload.topicId,
+          });
 
           EventBus.instance.emitEvent({
             event: threadEvents["thread.list.fetched"],
@@ -63,14 +74,14 @@ export class ThreadService {
     // Handle thread creation request
     EventBus.instance.onEvent({
       event: threadEvents["thread.create"],
-      callback: async (event: ThreadCreateEventData) => {
+      callback: async (threadCreateEventData: ThreadCreateEventData) => {
         try {
           // Only allow creating a thread without parent if no threads exist
-          if (!event.payload.leafMessageId) {
-            const existingThreads = await this.threadRepository.listThreads(
-              event.payload.accessToken,
-              event.payload.topicId
-            );
+          if (!threadCreateEventData.payload.leafMessageId) {
+            const existingThreads = await this.threadRepository.listThreads({
+              accessToken: threadCreateEventData.payload.accessToken,
+              topicId: threadCreateEventData.payload.topicId,
+            });
 
             if (existingThreads.length > 0) {
               throw new ThreadError(
@@ -80,19 +91,66 @@ export class ThreadService {
             }
           }
 
-          const thread = await this.threadRepository.createThread(
-            event.payload.accessToken,
-            event.payload.userId,
-            event.payload.topicId,
-            event.payload.name,
-            event.payload.leafMessageId ?? null,
-            event.payload.leftThreadId ?? null,
-            event.payload.rightThreadId ?? null
-          );
+          const llmResponseGeneratedEventData =
+            await EventBus.instance.emitAwait<
+              LlmResponseRequestedEventData,
+              LlmResponseGeneratedEventData
+            >({
+              listenEvent: {
+                event: llmEvents["llm.response.generated"],
+              },
+              emitEvent: {
+                event: llmEvents["llm.response.requested"],
+                data: LlmResponseRequestedEventData.from({
+                  model: "gpt-4o-mini",
+                  messages: [
+                    {
+                      role: "assistant",
+                      content:
+                        "You are the fastest text title builder. Only ouput 3 or less words that's a good title for the user text.",
+                    },
+                    {
+                      role: "user",
+                      content: threadCreateEventData.payload.newMessageContent,
+                    },
+                  ],
+                }),
+              },
+            });
+
+          const thread = await this.threadRepository.createThread({
+            accessToken: threadCreateEventData.payload.accessToken,
+            userId: threadCreateEventData.payload.userId,
+            topicId: threadCreateEventData.payload.topicId,
+            name: llmResponseGeneratedEventData.payload.content,
+            leafMessageId: threadCreateEventData.payload.leafMessageId ?? null,
+            leftThreadId: threadCreateEventData.payload.leftThreadId ?? null,
+            rightThreadId: threadCreateEventData.payload.rightThreadId ?? null,
+          });
+
+          await EventBus.instance.emitAwait<
+            MessageCreateEventData,
+            MessageCreatedEventData
+          >({
+            listenEvent: {
+              event: messageEvents["message.created"],
+            },
+            emitEvent: {
+              event: messageEvents["message.create"],
+              data: MessageCreateEventData.from({
+                content: threadCreateEventData.payload.newMessageContent,
+                role: "user",
+                threadId: thread.id,
+                topicId: thread.topicId,
+                userId: thread.userId,
+                accessToken: threadCreateEventData.payload.accessToken,
+              }),
+            },
+          });
 
           EventBus.instance.emitEvent({
             event: threadEvents["thread.created"],
-            correlationId: event.payload.userId,
+            correlationId: threadCreateEventData.payload.userId,
             data: ThreadCreatedEventData.from({
               id: thread.id,
               topicId: thread.topicId,
@@ -120,16 +178,16 @@ export class ThreadService {
       event: threadEvents["thread.update"],
       callback: async (event: ThreadUpdateEventData) => {
         try {
-          const thread = await this.threadRepository.updateThread(
-            event.payload.accessToken,
-            event.payload.id,
-            {
+          const thread = await this.threadRepository.updateThread({
+            accessToken: event.payload.accessToken,
+            threadId: event.payload.id,
+            updates: {
               name: event.payload.name,
               rank: event.payload.rank,
               leftThreadId: event.payload.leftThreadId,
               rightThreadId: event.payload.rightThreadId,
-            }
-          );
+            },
+          });
 
           EventBus.instance.emitEvent({
             event: threadEvents["thread.updated"],
@@ -158,10 +216,10 @@ export class ThreadService {
       event: threadEvents["thread.delete"],
       callback: async (event: ThreadDeleteEventData) => {
         try {
-          await this.threadRepository.deleteThread(
-            event.payload.accessToken,
-            event.payload.id
-          );
+          await this.threadRepository.deleteThread({
+            accessToken: event.payload.accessToken,
+            threadId: event.payload.id,
+          });
 
           EventBus.instance.emitEvent({
             event: threadEvents["thread.deleted"],
@@ -188,10 +246,10 @@ export class ThreadService {
       event: threadEvents["thread.messages.requested"],
       callback: async (event: ThreadMessagesRequestedEventData) => {
         try {
-          const thread = await this.threadRepository.getThread(
-            event.payload.accessToken,
-            event.payload.threadId
-          );
+          const thread = await this.threadRepository.getThread({
+            accessToken: event.payload.accessToken,
+            threadId: event.payload.threadId,
+          });
 
           if (!thread) {
             throw new ThreadError(
@@ -204,10 +262,10 @@ export class ThreadService {
             throw new ThreadError(ThreadErrorCode.UNAUTHORIZED, "Unauthorized");
           }
 
-          const messages = await this.threadRepository.getThreadMessages(
-            event.payload.accessToken,
-            event.payload.threadId
-          );
+          const messages = await this.threadRepository.getThreadMessages({
+            accessToken: event.payload.accessToken,
+            threadId: event.payload.threadId,
+          });
 
           EventBus.instance.emitEvent({
             event: threadEvents["thread.messages.fetched"],
@@ -252,11 +310,11 @@ export class ThreadService {
       event: threadEvents["thread.updateLeaf"],
       callback: async (event: ThreadUpdateLeafEventData) => {
         try {
-          await this.threadRepository.updateThreadLeaf(
-            event.payload.accessToken,
-            event.payload.threadId,
-            event.payload.messageId
-          );
+          await this.threadRepository.updateThreadLeaf({
+            accessToken: event.payload.accessToken,
+            threadId: event.payload.threadId,
+            messageId: event.payload.messageId,
+          });
 
           EventBus.instance.emitEvent({
             event: threadEvents["thread.leafUpdated"],
@@ -280,23 +338,23 @@ export class ThreadService {
     });
   }
 
-  async getThread(access_token: string, threadId: string) {
-    return this.threadRepository.getThread(access_token, threadId);
+  async getThread(accessToken: string, threadId: string) {
+    return this.threadRepository.getThread({ accessToken, threadId });
   }
 
-  async getThreadMessages(access_token: string, threadId: string) {
-    return this.threadRepository.getThreadMessages(access_token, threadId);
+  async getThreadMessages(accessToken: string, threadId: string) {
+    return this.threadRepository.getThreadMessages({ accessToken, threadId });
   }
 
   async updateThreadLeaf(
-    access_token: string,
+    accessToken: string,
     threadId: string,
     messageId: string
   ) {
-    return this.threadRepository.updateThreadLeaf(
-      access_token,
+    return this.threadRepository.updateThreadLeaf({
+      accessToken,
       threadId,
-      messageId
-    );
+      messageId,
+    });
   }
 }

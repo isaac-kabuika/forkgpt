@@ -70,8 +70,12 @@ export class MessageService {
     // Handle message creation request
     EventBus.instance.onEvent({
       event: messageEvents["message.create"],
-      callback: async (messageCreateEvent: MessageCreateEventData) => {
+      callback: async (
+        messageCreateEvent: MessageCreateEventData,
+        messageCreateEventCorrelationId
+      ) => {
         try {
+          console.log("message.create.handler");
           const userMessage =
             await this.messageRepository.createMessageWithThreadId(
               messageCreateEvent.payload.accessToken,
@@ -83,6 +87,7 @@ export class MessageService {
               },
               messageCreateEvent.payload.threadId ?? null
             );
+          console.log("message.create.handler.userMessage");
           const messages = await this.messageRepository.getThreadMessages(
             messageCreateEvent.payload.accessToken,
             userMessage.id
@@ -132,7 +137,7 @@ export class MessageService {
               }
               EventBus.instance.emitEvent({
                 event: messageEvents["message.created"],
-                correlationId: messageCreateEvent.payload.userId,
+                correlationId: messageCreateEventCorrelationId,
                 data: MessageCreatedEventData.from({
                   id: aiMessage.id,
                   content: aiMessage.content,
@@ -147,8 +152,8 @@ export class MessageService {
           });
           EventBus.instance.emitEvent({
             event: llmEvents["llm.response.requested"],
+            correlationId: llmRequestorCorrelationId,
             data: LlmResponseRequestedEventData.from({
-              requestorCorrelationId: llmRequestorCorrelationId,
               messages: messages.map((msg) => ({
                 role: msg.role,
                 content: msg.content,

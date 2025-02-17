@@ -20,6 +20,7 @@ export const createThreadRequestSchema = z.object({
   leafMessageId: z.string().uuid().nullable(),
   leftThreadId: z.string().uuid().nullable(),
   rightThreadId: z.string().uuid().nullable(),
+  newMessageContent: z.string().min(1),
 });
 export type CreateThreadRequest = z.infer<typeof createThreadRequestSchema>;
 

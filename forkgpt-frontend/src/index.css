@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap");
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -123,4 +125,19 @@ button:focus-visible {
 [role="button"]:hover {
   transform: none;
   z-index: auto;
+}
+
+.font-pacifico {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+/* Add to your existing styles */
+.sidebar-icon-button {
+  @apply p-2 hover:bg-gray-200 rounded-lg transition-colors;
+}
+
+.collapsed-only:hover .tooltip {
+  @apply visible opacity-100;
 }

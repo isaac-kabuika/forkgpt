@@ -14,6 +14,7 @@ import {
 } from "../../_generated/events/message-events";
 import { MessageError, MessageErrorCode } from "./message.types";
 import * as ApiType from "forkgpt-api-types";
+import { randomUUID } from "crypto";
 
 let messageService: MessageService;
 
@@ -69,9 +70,10 @@ export function initMessageApi(app: Application) {
       try {
         const createData = ApiType.createMessageRequestSchema.parse(req.body);
 
+        const requestorCorrelationId = randomUUID();
         EventBus.instance.onceEvent({
           event: messageEvents["message.created"],
-          correlationId: req.user.id,
+          correlationId: requestorCorrelationId,
           callback: (data: MessageCreatedEventData) => {
             const response: ApiType.MessageResponse = {
               message: {
@@ -91,7 +93,7 @@ export function initMessageApi(app: Application) {
 
         EventBus.instance.emitEvent({
           event: messageEvents["message.create"],
-          correlationId: req.user.id,
+          correlationId: requestorCorrelationId,
           data: MessageCreateEventData.from({
             content: createData.content,
             role: "user",

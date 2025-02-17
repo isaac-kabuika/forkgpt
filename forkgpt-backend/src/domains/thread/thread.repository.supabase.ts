@@ -5,15 +5,24 @@ import { Message } from "../message/message.types";
 import { Tables } from "../../_generated/database/database.types";
 
 export class SupabaseThreadRepository implements ThreadRepository {
-  async createThread(
-    access_token: string,
-    userId: string,
-    topicId: string,
-    name: string,
-    leafMessageId: string | null,
-    leftThreadId: string | null,
-    rightThreadId: string | null
-  ): Promise<Thread> {
+  async createThread(args: {
+    accessToken: string;
+    userId: string;
+    topicId: string;
+    name: string;
+    leafMessageId: string | null;
+    leftThreadId: string | null;
+    rightThreadId: string | null;
+  }): Promise<Thread> {
+    const {
+      accessToken,
+      userId,
+      topicId,
+      name,
+      leafMessageId,
+      leftThreadId,
+      rightThreadId,
+    } = args;
     // Calculate new rank
     let newRank: number;
     if (leftThreadId && rightThreadId) {
@@ -23,7 +32,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
         .select("id,rank")
         .in("id", [leftThreadId, rightThreadId])
         .returns<Pick<Tables<"threads">, "id" | "rank">[]>()
-        .setHeader("Authorization", `Bearer ${access_token}`);
+        .setHeader("Authorization", `Bearer ${accessToken}`);
 
       if (threadsError || !threads || threads.length !== 2) {
         throw threadsError;
@@ -47,7 +56,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
         .select("rank")
         .eq("id", leftThreadId)
         .single<Pick<Tables<"threads">, "rank">>()
-        .setHeader("Authorization", `Bearer ${access_token}`);
+        .setHeader("Authorization", `Bearer ${accessToken}`);
 
       if (leftError || !leftThread) {
         throw leftError;
@@ -60,7 +69,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
         .select("rank")
         .eq("id", rightThreadId)
         .single<Pick<Tables<"threads">, "rank">>()
-        .setHeader("Authorization", `Bearer ${access_token}`);
+        .setHeader("Authorization", `Bearer ${accessToken}`);
 
       if (rightError || !rightThread) {
         throw rightError;
@@ -81,7 +90,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
       ] satisfies Omit<Tables<"threads">, "id" | "created_at" | "updated_at">[])
       .select()
       .single<Tables<"threads">>()
-      .setHeader("Authorization", `Bearer ${access_token}`);
+      .setHeader("Authorization", `Bearer ${accessToken}`);
 
     if (error) {
       throw new ThreadError(
@@ -93,16 +102,17 @@ export class SupabaseThreadRepository implements ThreadRepository {
     return this.mapDbThreadToDomain(data);
   }
 
-  async getThread(
-    access_token: string,
-    threadId: string
-  ): Promise<Thread | null> {
+  async getThread(args: {
+    accessToken: string;
+    threadId: string;
+  }): Promise<Thread | null> {
+    const { accessToken, threadId } = args;
     const { data, error } = await Supabase.client
       .from("threads")
       .select()
       .eq("id", threadId)
       .single<Tables<"threads">>()
-      .setHeader("Authorization", `Bearer ${access_token}`);
+      .setHeader("Authorization", `Bearer ${accessToken}`);
 
     if (error) {
       if (error.code === "PGRST116") {
@@ -117,12 +127,13 @@ export class SupabaseThreadRepository implements ThreadRepository {
     return this.mapDbThreadToDomain(data);
   }
 
-  async getThreadMessages(
-    access_token: string,
-    threadId: string
-  ): Promise<Message[]> {
+  async getThreadMessages(args: {
+    accessToken: string;
+    threadId: string;
+  }): Promise<Message[]> {
+    const { accessToken, threadId } = args;
     // First get the thread to find the leaf message
-    const thread = await this.getThread(access_token, threadId);
+    const thread = await this.getThread({ accessToken, threadId });
     if (!thread || !thread.leafMessageId) {
       return [];
     }
@@ -133,7 +144,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
         leaf_message_id: thread.leafMessageId,
       })
       .returns<Tables<"messages">[]>()
-      .setHeader("Authorization", `Bearer ${access_token}`);
+      .setHeader("Authorization", `Bearer ${accessToken}`);
 
     if (error) {
       throw new ThreadError(
@@ -145,14 +156,18 @@ export class SupabaseThreadRepository implements ThreadRepository {
     return data.map(this.mapDbMessageToDomain);
   }
 
-  async listThreads(access_token: string, topicId: string): Promise<Thread[]> {
+  async listThreads(args: {
+    accessToken: string;
+    topicId: string;
+  }): Promise<Thread[]> {
+    const { accessToken, topicId } = args;
     const { data, error } = await Supabase.client
       .from("threads")
       .select()
       .eq("topic_id", topicId)
       .order("rank", { ascending: true })
       .returns<Tables<"threads">[]>()
-      .setHeader("Authorization", `Bearer ${access_token}`);
+      .setHeader("Authorization", `Bearer ${accessToken}`);
 
     if (error) {
       throw new ThreadError(
@@ -164,16 +179,17 @@ export class SupabaseThreadRepository implements ThreadRepository {
     return data.map(this.mapDbThreadToDomain);
   }
 
-  async updateThread(
-    access_token: string,
-    threadId: string,
+  async updateThread(args: {
+    accessToken: string;
+    threadId: string;
     updates: {
       name?: string;
       rank?: number;
       leftThreadId?: string | null;
       rightThreadId?: string | null;
-    }
-  ): Promise<Thread> {
+    };
+  }): Promise<Thread> {
+    const { accessToken, threadId, updates } = args;
     let newRank: number | undefined = updates.rank;
 
     // If we need to calculate a new rank based on adjacent threads
@@ -189,7 +205,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
           .select("rank")
           .eq("id", updates.leftThreadId)
           .single<Pick<Tables<"threads">, "rank">>()
-          .setHeader("Authorization", `Bearer ${access_token}`);
+          .setHeader("Authorization", `Bearer ${accessToken}`);
 
         if (leftError || !leftThread) {
           throw new ThreadError(
@@ -204,7 +220,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
           .select("rank")
           .eq("id", updates.rightThreadId)
           .single<Pick<Tables<"threads">, "rank">>()
-          .setHeader("Authorization", `Bearer ${access_token}`);
+          .setHeader("Authorization", `Bearer ${accessToken}`);
 
         if (rightError || !rightThread) {
           throw new ThreadError(
@@ -219,7 +235,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
           .select("id,rank")
           .in("id", [updates.leftThreadId, updates.rightThreadId])
           .returns<Pick<Tables<"threads">, "id" | "rank">[]>()
-          .setHeader("Authorization", `Bearer ${access_token}`);
+          .setHeader("Authorization", `Bearer ${accessToken}`);
 
         if (threadsError || !threads || threads.length !== 2) {
           throw new ThreadError(
@@ -257,7 +273,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
       .eq("id", threadId)
       .select()
       .single<Tables<"threads">>()
-      .setHeader("Authorization", `Bearer ${access_token}`);
+      .setHeader("Authorization", `Bearer ${accessToken}`);
 
     if (error) {
       throw new ThreadError(
@@ -269,12 +285,16 @@ export class SupabaseThreadRepository implements ThreadRepository {
     return this.mapDbThreadToDomain(data);
   }
 
-  async deleteThread(access_token: string, threadId: string): Promise<void> {
+  async deleteThread(args: {
+    accessToken: string;
+    threadId: string;
+  }): Promise<void> {
+    const { accessToken, threadId } = args;
     const { error } = await Supabase.client
       .from("threads")
       .delete()
       .eq("id", threadId)
-      .setHeader("Authorization", `Bearer ${access_token}`);
+      .setHeader("Authorization", `Bearer ${accessToken}`);
 
     if (error) {
       throw new ThreadError(
@@ -284,18 +304,19 @@ export class SupabaseThreadRepository implements ThreadRepository {
     }
   }
 
-  async updateThreadLeaf(
-    access_token: string,
-    threadId: string,
-    messageId: string
-  ): Promise<Thread> {
+  async updateThreadLeaf(args: {
+    accessToken: string;
+    threadId: string;
+    messageId: string;
+  }): Promise<Thread> {
+    const { accessToken, threadId, messageId } = args;
     const { data, error } = await Supabase.client
       .from("threads")
       .update({ leaf_message_id: messageId })
       .eq("id", threadId)
       .select()
       .single<Tables<"threads">>()
-      .setHeader("Authorization", `Bearer ${access_token}`);
+      .setHeader("Authorization", `Bearer ${accessToken}`);
 
     if (error) {
       throw new ThreadError(

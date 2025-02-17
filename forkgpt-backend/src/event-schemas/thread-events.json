@@ -95,9 +95,18 @@
           },
           "rightThreadId": {
             "type": ["string", "null"]
+          },
+          "newMessageContent": {
+            "type": "string"
           }
         },
-        "required": ["name", "topicId", "userId", "accessToken"],
+        "required": [
+          "name",
+          "topicId",
+          "userId",
+          "accessToken",
+          "newMessageContent"
+        ],
         "additionalProperties": false
       }
     },

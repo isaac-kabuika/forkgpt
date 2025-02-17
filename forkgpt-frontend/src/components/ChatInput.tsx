@@ -46,8 +46,8 @@ export function ChatInput() {
   }
 
   return (
-    <div className="px-4 pb-4 pt-2 mb-4">
-      <div className="max-w-2xl mx-auto relative">
+    <div className="pb-2 mb-4">
+      <div className="max-w-3xl mx-auto relative">
         <textarea
           ref={textareaRef}
           value={content}
@@ -76,7 +76,7 @@ export function ChatInput() {
           <svg viewBox="0 0 24 24" className="w-5 h-5 text-white">
             <path
               fill="currentColor"
-              d="M4 12h12M12 6l6 6-6 6"
+              d="M12 4v12M6 10l6-6 6 6"
               strokeWidth="3"
               stroke="currentColor"
               strokeLinecap="round"

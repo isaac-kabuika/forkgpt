@@ -1,7 +1,8 @@
 import { useThreadMessages } from "../server-state/thread.hooks";
-import { useAppSelector } from "../client-state/hooks";
+import { useAppSelector, useAppDispatch } from "../client-state/hooks";
 import { Message } from "./Message";
 import { useEffect, useRef } from "react";
+import { setActiveThread } from "../client-state/slices/threadSlice";
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
@@ -13,6 +14,7 @@ export function MessageList() {
     activeThreadId || ""
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dispatch = useAppDispatch();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
@@ -22,6 +24,13 @@ export function MessageList() {
   useEffect(() => {
     scrollToBottom();
   }, [threadData?.messages, activeThreadId]);
+
+  // Add useEffect to handle thread activation
+  useEffect(() => {
+    if (threadData?.thread.id && activeThreadId !== threadData.thread.id) {
+      dispatch(setActiveThread(threadData.thread.id));
+    }
+  }, [threadData?.thread.id, activeThreadId, dispatch]);
 
   if (!activeThreadId) {
     return (
@@ -64,9 +73,9 @@ export function MessageList() {
             )}
           >
             <div
-              className={message.role === "user" ? "w-3/4 ml-auto" : "w-3/4"}
+              className={message.role === "user" ? "w-3/4 ml-auto" : "w-full"}
             >
-              <Message message={message} />
+              <Message message={message} threadId={threadData.thread.id} />
             </div>
           </div>
         ))}
