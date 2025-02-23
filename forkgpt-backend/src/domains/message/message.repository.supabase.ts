@@ -1,4 +1,4 @@
-import { Supabase } from "../../../supabase/supabase";
+import { Supabase } from "../../supabase/supabase";
 import { Message, MessageError, MessageErrorCode } from "./message.types";
 import { MessageRepository } from "./message.repository";
 import { Tables } from "../../_generated/database/database.types";

@@ -1,10 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { supabase } from "../../supabase";
+import { User as SupabaseUser } from "@supabase/supabase-js";
 
-interface User {
-  id: string;
-  isAnonymous: boolean;
-}
+type User = SupabaseUser;
 
 interface AuthState {
   user: User | null;
@@ -24,10 +22,7 @@ export const initializeAuth = createAsyncThunk(
       if (error) throw error;
       if (!session?.user) throw new Error("No user returned");
 
-      return {
-        id: session.user.id,
-        isAnonymous: true,
-      } as User;
+      return session.user;
     } catch (error) {
       return rejectWithValue("Failed to initialize auth");
     }

@@ -5,14 +5,16 @@ import cors from "cors";
 import { EventBus } from "safe-event";
 import { initMessageApi } from "./domains/message/message.api";
 import { initTopicApi } from "./domains/topic/topic.api";
-import { Supabase } from "../supabase/supabase";
+import { Supabase } from "./supabase/supabase";
 import { initUserMiddleware } from "./domains/user/user.middleware";
 import { initThreadApi } from "./domains/thread/thread.api";
 import { LlmService } from "./domains/llm/llm.service";
+import { AblyService } from "./ably/ably";
 
 // Initialize core services
 Supabase.init();
 EventBus.init();
+AblyService.init();
 
 const app = express();
 

@@ -1,5 +1,5 @@
 import { Application, Request, Response, NextFunction } from "express";
-import { Supabase } from "../../../supabase/supabase";
+import { Supabase } from "../../supabase/supabase";
 import { User } from "@supabase/supabase-js";
 
 export function initUserMiddleware(app: Application) {

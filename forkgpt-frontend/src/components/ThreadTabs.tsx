@@ -67,32 +67,28 @@ const SortableItem = React.memo(
         role="button"
       >
         <div
-          className="flex items-center flex-1"
+          className={classNames(
+            thread.id === activeThreadId
+              ? "text-blue-700 bg-blue-100"
+              : "text-gray-600 hover:bg-blue-50",
+            "w-full flex justify-between items-center py-1.5 px-2 text-sm rounded-md transition-colors cursor-pointer"
+          )}
           {...listeners}
           onClick={(e) => {
             e.stopPropagation();
             onSelect(thread.id);
           }}
         >
+          <span className="line-clamp-1">{thread.name}</span>
           <button
-            className={classNames(
-              thread.id === activeThreadId
-                ? "text-blue-700 bg-blue-100"
-                : "text-gray-600 hover:bg-blue-50",
-              "w-full flex justify-between items-center py-1.5 px-2 text-sm rounded-md transition-colors"
-            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(thread.id);
+            }}
+            className="ml-2 text-gray-400 hover:text-gray-600"
+            title="Delete thread"
           >
-            <span className="line-clamp-1">{thread.name}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(thread.id);
-              }}
-              className="ml-2 text-gray-400 hover:text-gray-600"
-              title="Delete thread"
-            >
-              <XMarkIcon className="w-4 h-4" />
-            </button>
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
       </div>

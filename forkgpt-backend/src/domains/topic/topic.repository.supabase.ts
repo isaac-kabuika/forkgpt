@@ -1,4 +1,4 @@
-import { Supabase } from "../../../supabase/supabase";
+import { Supabase } from "../../supabase/supabase";
 import { Topic, TopicError, TopicErrorCode } from "./topic.types";
 import { TopicRepository } from "./topic.repository";
 import { Tables } from "../../_generated/database/database.types";

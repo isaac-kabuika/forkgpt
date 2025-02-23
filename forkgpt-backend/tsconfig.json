@@ -16,6 +16,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*", "supabase/supabase.ts"],
+  "include": ["src/**/*", "src/supabase/supabase.ts"],
   "exclude": ["node_modules", "dist"]
 }

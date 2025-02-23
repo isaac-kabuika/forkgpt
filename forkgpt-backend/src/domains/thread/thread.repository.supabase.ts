@@ -1,4 +1,4 @@
-import { Supabase } from "../../../supabase/supabase";
+import { Supabase } from "../../supabase/supabase";
 import { Thread, ThreadError, ThreadErrorCode } from "./thread.types";
 import { ThreadRepository } from "./thread.repository";
 import { Message } from "../message/message.types";

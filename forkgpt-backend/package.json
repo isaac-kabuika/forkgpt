@@ -27,14 +27,15 @@
     "@supabase/supabase-js": "^2.48.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "ably": "^2.6.3",
     "ajv": "^8.17.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "firebase-admin": "^13.0.2",
+    "forkgpt-api-types": "file:../forkgpt-api-types/forkgpt-api-types-1.0.31.tgz",
     "openai": "^4.77.0",
     "safe-event": "^1.0.28",
-    "zod": "^3.24.1",
-    "forkgpt-api-types": "file:../forkgpt-api-types/forkgpt-api-types-1.0.24.tgz"
+    "zod": "^3.24.1"
   }
 }

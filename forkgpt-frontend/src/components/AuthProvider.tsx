@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../client-state/hooks";
-import { initializeAuth } from "../client-state/slices/authSlice";
+import { initializeAuth, setUser } from "../client-state/slices/authSlice";
 import { supabase } from "../supabase";
 
 interface AuthProviderProps {
@@ -17,12 +17,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
       if (!session && !initialized.current) {
         initialized.current = true;
         dispatch(initializeAuth());
+      } else if (session && !initialized.current) {
+        initialized.current = true;
+        dispatch(setUser(session.user));
       }
     }
-
     initAuth();
   }, [dispatch]);
 
