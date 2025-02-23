@@ -4,7 +4,7 @@ import { z } from "zod";
 export const messageSchema = z.object({
   id: z.string(),
   content: z.string(),
-  role: z.enum(["user", "assistant"]),
+  role: z.enum(["user", "assistant", "system"]),
   parentId: z.string().nullable(),
   topicId: z.string(),
   userId: z.string(),

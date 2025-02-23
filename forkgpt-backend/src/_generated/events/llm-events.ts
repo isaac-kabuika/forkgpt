@@ -11,7 +11,7 @@ export type llmEventTypes = typeof llmEvents[keyof typeof llmEvents];
 
 
 
-const LlmResponseRequestedSchema = z.object({ "messages": z.array(z.object({ "role": z.enum(["user","assistant"]), "content": z.string() }).strict()), "model": z.enum(["gpt-4o-mini","gpt-4o"]).optional() }).strict();
+const LlmResponseRequestedSchema = z.object({ "messages": z.array(z.object({ "role": z.enum(["user","assistant","system"]), "content": z.string() }).strict()), "model": z.enum(["gpt-4o-mini","gpt-4o"]).optional() }).strict();
 
 export type LlmResponseRequestedEventPayload = z.infer<typeof LlmResponseRequestedSchema>;
 

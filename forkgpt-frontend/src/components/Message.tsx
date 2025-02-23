@@ -6,6 +6,7 @@ import { useCreateThread } from "../server-state/thread.hooks";
 import { useAppSelector } from "../client-state/hooks";
 import { threadApi } from "../server-state/thread.api";
 import { useThreads } from "../server-state/thread.hooks";
+import ReactMarkdown from "react-markdown";
 
 interface MessageProps {
   message: MessageType;
@@ -98,7 +99,11 @@ export function Message({ message, threadId }: MessageProps) {
           </>
         )}
         <div className={message.role === "assistant" ? "ml-4" : ""}>
-          {message.content}
+          {message.role === "assistant" ? (
+            <ReactMarkdown>{message.content}</ReactMarkdown>
+          ) : (
+            message.content
+          )}
         </div>
       </div>
     </div>

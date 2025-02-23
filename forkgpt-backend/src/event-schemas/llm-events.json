@@ -12,7 +12,7 @@
               "properties": {
                 "role": {
                   "type": "string",
-                  "enum": ["user", "assistant"]
+                  "enum": ["user", "assistant", "system"]
                 },
                 "content": {
                   "type": "string"

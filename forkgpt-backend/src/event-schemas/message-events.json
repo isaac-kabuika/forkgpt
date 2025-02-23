@@ -39,7 +39,7 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": ["user", "assistant"]
+                  "enum": ["user", "assistant", "system"]
                 },
                 "parentId": {
                   "type": ["string", "null"]
@@ -76,7 +76,7 @@
           },
           "role": {
             "type": "string",
-            "enum": ["user", "assistant"]
+            "enum": ["user", "assistant", "system"]
           },
           "topicId": {
             "type": "string"
@@ -107,7 +107,7 @@
           },
           "role": {
             "type": "string",
-            "enum": ["user", "assistant"]
+            "enum": ["user", "assistant", "system"]
           },
           "parentId": {
             "type": ["string", "null"]
@@ -218,7 +218,7 @@
           },
           "role": {
             "type": "string",
-            "enum": ["user", "assistant"]
+            "enum": ["user", "assistant", "system"]
           },
           "parentId": {
             "type": ["string", "null"]

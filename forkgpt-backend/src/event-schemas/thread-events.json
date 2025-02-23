@@ -307,7 +307,7 @@
                 },
                 "role": {
                   "type": "string",
-                  "enum": ["user", "assistant"]
+                  "enum": ["user", "assistant", "system"]
                 },
                 "parentId": {
                   "type": ["string", "null"]

@@ -42,7 +42,7 @@ export class MessageListRequestedEventData {
 }
 
 
-const MessageListFetchedSchema = z.object({ "topicId": z.string(), "messages": z.array(z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant"]), "parentId": z.union([z.string(), z.null()]), "createdAt": z.number(), "updatedAt": z.number() }).strict()) }).strict();
+const MessageListFetchedSchema = z.object({ "topicId": z.string(), "messages": z.array(z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant","system"]), "parentId": z.union([z.string(), z.null()]), "createdAt": z.number(), "updatedAt": z.number() }).strict()) }).strict();
 
 export type MessageListFetchedEventPayload = z.infer<typeof MessageListFetchedSchema>;
 
@@ -67,7 +67,7 @@ export class MessageListFetchedEventData {
 }
 
 
-const MessageCreateSchema = z.object({ "content": z.string(), "role": z.enum(["user","assistant"]), "topicId": z.string(), "threadId": z.union([z.string(), z.null()]).optional(), "userId": z.string(), "accessToken": z.string() }).strict();
+const MessageCreateSchema = z.object({ "content": z.string(), "role": z.enum(["user","assistant","system"]), "topicId": z.string(), "threadId": z.union([z.string(), z.null()]).optional(), "userId": z.string(), "accessToken": z.string() }).strict();
 
 export type MessageCreateEventPayload = z.infer<typeof MessageCreateSchema>;
 
@@ -92,7 +92,7 @@ export class MessageCreateEventData {
 }
 
 
-const MessageCreatedSchema = z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant"]), "parentId": z.union([z.string(), z.null()]), "topicId": z.string(), "userId": z.string(), "createdAt": z.number() }).strict();
+const MessageCreatedSchema = z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant","system"]), "parentId": z.union([z.string(), z.null()]), "topicId": z.string(), "userId": z.string(), "createdAt": z.number() }).strict();
 
 export type MessageCreatedEventPayload = z.infer<typeof MessageCreatedSchema>;
 
@@ -217,7 +217,7 @@ export class MessageDeletedEventData {
 }
 
 
-const MessageAiResponsePartialMessageSchema = z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant"]), "parentId": z.union([z.string(), z.null()]), "topicId": z.string(), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number(), "isFinalMessage": z.boolean() }).strict();
+const MessageAiResponsePartialMessageSchema = z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant","system"]), "parentId": z.union([z.string(), z.null()]), "topicId": z.string(), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number(), "isFinalMessage": z.boolean() }).strict();
 
 export type MessageAiResponsePartialMessageEventPayload = z.infer<typeof MessageAiResponsePartialMessageSchema>;
 

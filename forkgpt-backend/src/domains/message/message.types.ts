@@ -16,7 +16,7 @@ export class MessageError extends Error {
 export interface Message {
   id: string;
   content: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   parentId: string | null;
   topicId: string;
   userId: string;

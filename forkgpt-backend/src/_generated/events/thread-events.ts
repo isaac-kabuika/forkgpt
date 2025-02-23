@@ -245,7 +245,7 @@ export class ThreadMessagesRequestedEventData {
 }
 
 
-const ThreadMessagesFetchedSchema = z.object({ "thread": z.object({ "id": z.string(), "topicId": z.string(), "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number(), "rank": z.number() }).strict(), "messages": z.array(z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant"]), "parentId": z.union([z.string(), z.null()]), "topicId": z.string(), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number() }).strict()) }).strict();
+const ThreadMessagesFetchedSchema = z.object({ "thread": z.object({ "id": z.string(), "topicId": z.string(), "name": z.string(), "leafMessageId": z.union([z.string(), z.null()]), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number(), "rank": z.number() }).strict(), "messages": z.array(z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant","system"]), "parentId": z.union([z.string(), z.null()]), "topicId": z.string(), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number() }).strict()) }).strict();
 
 export type ThreadMessagesFetchedEventPayload = z.infer<typeof ThreadMessagesFetchedSchema>;
 

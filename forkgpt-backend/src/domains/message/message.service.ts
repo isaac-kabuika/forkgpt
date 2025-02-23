@@ -184,10 +184,18 @@ export class MessageService {
             event: llmEvents["llm.response.requested"],
             correlationId: llmRequestorCorrelationId,
             data: LlmResponseRequestedEventData.from({
-              messages: messages.map((msg) => ({
-                role: msg.role,
-                content: msg.content,
-              })),
+              model: "gpt-4o",
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You are a useful assistant, expert in markdow. Always responds in clear, pretty markdown.",
+                },
+                ...messages.map((msg) => ({
+                  role: msg.role,
+                  content: msg.content,
+                })),
+              ],
             }),
           });
         } catch (error) {
