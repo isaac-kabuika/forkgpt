@@ -42,6 +42,24 @@
         "required": ["content"],
         "additionalProperties": false
       }
+    },
+    "llm.chunk.generated": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "chunkContent": {
+            "type": "string"
+          },
+          "fullContent": {
+            "type": "string"
+          },
+          "isFinalChunk": {
+            "type": "boolean"
+          }
+        },
+        "required": ["fullContent", "chunkContent", "isFinalChunk"],
+        "additionalProperties": false
+      }
     }
   }
 }

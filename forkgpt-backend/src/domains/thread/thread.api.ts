@@ -145,7 +145,6 @@ export function initThreadApi(app: Application) {
           event: threadEvents["thread.created"],
           correlationId: req.user.id,
           callback: (data: ThreadCreatedEventData) => {
-            console.log("got here to thread api");
             const response: ApiType.ThreadResponse = {
               thread: {
                 id: data.payload.id,

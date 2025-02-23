@@ -9,11 +9,13 @@ import {
   MessageCreateEventData,
   MessageUpdateEventData,
   MessageDeleteEventData,
-  MessageAiResponseRequestedEventData,
+  MessageAiResponsePartialMessageEventData,
+  MessageAiResponsePartialMessageEventPayload,
 } from "../../_generated/events/message-events";
 import { MessageRepository } from "./message.repository";
-import { MessageError, MessageErrorCode } from "./message.types";
+import { MessageError, MessageErrorCode, Message } from "./message.types";
 import {
+  LlmChunkGeneratedEventData,
   llmEvents,
   LlmResponseGeneratedEventData,
   LlmResponseRequestedEventData,
@@ -75,7 +77,6 @@ export class MessageService {
         messageCreateEventCorrelationId
       ) => {
         try {
-          console.log("message.create.handler");
           const userMessage =
             await this.messageRepository.createMessageWithThreadId(
               messageCreateEvent.payload.accessToken,
@@ -87,7 +88,6 @@ export class MessageService {
               },
               messageCreateEvent.payload.threadId ?? null
             );
-          console.log("message.create.handler.userMessage");
           const messages = await this.messageRepository.getThreadMessages(
             messageCreateEvent.payload.accessToken,
             userMessage.id
@@ -106,6 +106,35 @@ export class MessageService {
           }
 
           const llmRequestorCorrelationId = randomUUID();
+          const aiResponseMessageId = randomUUID();
+
+          const llmChunkListener = EventBus.instance.onEvent({
+            event: llmEvents["llm.chunk.generated"],
+            correlationId: llmRequestorCorrelationId,
+            callback: async (
+              llmChunkGeneratedEventData: LlmChunkGeneratedEventData
+            ) => {
+              if (llmChunkGeneratedEventData.payload.isFinalChunk) {
+                llmChunkListener.destroy();
+              }
+              EventBus.instance.emitEvent({
+                event: messageEvents["message.aiResponse.partialMessage"],
+                correlationId: messageCreateEventCorrelationId,
+                data: MessageAiResponsePartialMessageEventData.from({
+                  content: llmChunkGeneratedEventData.payload.fullContent,
+                  createdAt: Date.now(),
+                  id: aiResponseMessageId,
+                  parentId: userMessage.id,
+                  role: "assistant",
+                  topicId: userMessage.topicId,
+                  updatedAt: Date.now(),
+                  userId: userMessage.userId,
+                  isFinalMessage:
+                    llmChunkGeneratedEventData.payload.isFinalChunk,
+                }),
+              });
+            },
+          });
 
           EventBus.instance.onceEvent({
             event: llmEvents["llm.response.generated"],
@@ -121,7 +150,8 @@ export class MessageService {
                   topicId: userMessage.topicId,
                   parentId: userMessage.id,
                   userId: userMessage.userId,
-                }
+                },
+                aiResponseMessageId
               );
               if (messageCreateEvent.payload.threadId) {
                 EventBus.instance.emitEvent({

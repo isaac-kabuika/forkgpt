@@ -11,12 +11,37 @@ import {
   MessageCreateEventData,
   MessageUpdateEventData,
   MessageDeleteEventData,
+  MessageAiResponsePartialMessageEventData,
 } from "../../_generated/events/message-events";
 import { MessageError, MessageErrorCode } from "./message.types";
 import * as ApiType from "forkgpt-api-types";
 import { randomUUID } from "crypto";
+import { AblyService } from "../../ably/ably";
+
+const MESSAGE_STREAM_RATE_MS = 100;
 
 let messageService: MessageService;
+
+function createThrottledFunction<T extends (...args: any[]) => void>(
+  fn: T,
+  delay: number
+): T {
+  let timeoutId: NodeJS.Timeout | null = null;
+  let lastArgs: Parameters<T> | null = null;
+
+  return ((...args: Parameters<T>) => {
+    lastArgs = args;
+
+    if (!timeoutId) {
+      timeoutId = setTimeout(() => {
+        if (lastArgs) {
+          fn(...lastArgs);
+        }
+        timeoutId = null;
+      }, delay);
+    }
+  }) as T;
+}
 
 export function initMessageApi(app: Application) {
   // Initialize service
@@ -69,8 +94,37 @@ export function initMessageApi(app: Application) {
     async (req: Request, res: Response) => {
       try {
         const createData = ApiType.createMessageRequestSchema.parse(req.body);
-
         const requestorCorrelationId = randomUUID();
+
+        const throttledEmit = createThrottledFunction(
+          (data: MessageAiResponsePartialMessageEventData) => {
+            AblyService.emitToClient({
+              userId: req.user.id,
+              eventName: ApiType.ably.EventName.MESSAGE_UPDATED,
+              data: ApiType.ably.messageUpdatedSchema.parse({
+                message: {
+                  ...data.payload,
+                  createdAt: new Date(data.payload.createdAt),
+                  updatedAt: new Date(data.payload.updatedAt),
+                },
+                threadId: createData.threadId,
+              } as ApiType.ably.MessageUpdated),
+            });
+          },
+          MESSAGE_STREAM_RATE_MS
+        );
+
+        const aiResponseChunkListener = EventBus.instance.onEvent({
+          event: messageEvents["message.aiResponse.partialMessage"],
+          correlationId: requestorCorrelationId,
+          callback: (data: MessageAiResponsePartialMessageEventData) => {
+            throttledEmit(data);
+            if (data.payload.isFinalMessage) {
+              aiResponseChunkListener.destroy();
+            }
+          },
+        });
+
         EventBus.instance.onceEvent({
           event: messageEvents["message.created"],
           correlationId: requestorCorrelationId,

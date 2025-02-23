@@ -29,25 +29,56 @@ const initializeStreamListener = () => {
       // Set up message handlers
       channel.subscribe(
         Api.ably.EventName.MESSAGE_UPDATED,
-        (ablyMessage: Api.ably.MessageUpdated) => {
-          console.log("Api.ably.MessageUpdatedEvent ", ablyMessage);
-          const updatedMessage = ablyMessage.message;
+        (ablyMessage: { data: Api.ably.MessageUpdated }) => {
+          const updatedMessage = ablyMessage.data.message;
+          const threadId = ablyMessage.data.threadId;
+
+          // Update or insert the message detail cache
           queryClient.setQueryData(
             messageKeys.detail(updatedMessage.id),
             updatedMessage
           );
 
-          const threadId = ablyMessage.threadId;
+          // Update or insert the message in thread messages cache
           if (threadId) {
-            queryClient.setQueryData(
+            queryClient.setQueryData<Api.ThreadWithMessages>(
               threadKeys.messages(threadId),
-              (oldData: any) => ({
-                ...oldData,
-                messages:
-                  oldData?.messages?.map((msg: any) =>
-                    msg.id === updatedMessage.id ? updatedMessage : msg
-                  ) || [],
-              })
+              (oldData) => {
+                if (!oldData) return oldData;
+
+                const messageExists = oldData.messages.some(
+                  (msg) => msg.id === updatedMessage.id
+                );
+
+                return {
+                  ...oldData,
+                  messages: messageExists
+                    ? oldData.messages.map((msg) =>
+                        msg.id === updatedMessage.id ? updatedMessage : msg
+                      )
+                    : [...oldData.messages, updatedMessage],
+                };
+              }
+            );
+          }
+
+          // Update or insert message in responses cache if it exists
+          if (updatedMessage.parentId) {
+            queryClient.setQueryData<Api.Message[]>(
+              messageKeys.responses(updatedMessage.parentId),
+              (oldData) => {
+                if (!oldData) return [updatedMessage];
+
+                const messageExists = oldData.some(
+                  (msg) => msg.id === updatedMessage.id
+                );
+
+                return messageExists
+                  ? oldData.map((msg) =>
+                      msg.id === updatedMessage.id ? updatedMessage : msg
+                    )
+                  : [...oldData, updatedMessage];
+              }
             );
           }
         }

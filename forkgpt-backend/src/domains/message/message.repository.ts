@@ -3,7 +3,8 @@ import { Message } from "./message.types";
 export interface MessageRepository {
   createMessage(
     access_token: string,
-    message: Omit<Message, "id" | "createdAt" | "updatedAt">
+    message: Omit<Message, "id" | "createdAt" | "updatedAt">,
+    id?: string
   ): Promise<Message>;
   createMessageWithThreadId(
     access_token: string,

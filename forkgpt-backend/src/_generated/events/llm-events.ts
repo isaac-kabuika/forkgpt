@@ -3,7 +3,8 @@ import { z } from "zod";
 
 export const llmEvents = {
   "llm.response.requested": "llm:llm.response.requested",
-  "llm.response.generated": "llm:llm.response.generated"
+  "llm.response.generated": "llm:llm.response.generated",
+  "llm.chunk.generated": "llm:llm.chunk.generated"
 } as const;
 
 export type llmEventTypes = typeof llmEvents[keyof typeof llmEvents];
@@ -56,5 +57,30 @@ export class LlmResponseGeneratedEventData {
 
   static from(data: LlmResponseGeneratedEventPayload): LlmResponseGeneratedEventData {
     return new LlmResponseGeneratedEventData(data);
+  }
+}
+
+
+const LlmChunkGeneratedSchema = z.object({ "chunkContent": z.string(), "fullContent": z.string(), "isFinalChunk": z.boolean() }).strict();
+
+export type LlmChunkGeneratedEventPayload = z.infer<typeof LlmChunkGeneratedSchema>;
+
+export class LlmChunkGeneratedEventData {
+  private readonly data: LlmChunkGeneratedEventPayload;
+
+  constructor(data: unknown) {
+    const payload = typeof data === 'object' && data !== null && 'data' in data
+      ? (data as any).data
+      : data;
+
+    this.data = LlmChunkGeneratedSchema.parse(payload);
+  }
+
+  get payload(): LlmChunkGeneratedEventPayload {
+    return this.data;
+  }
+
+  static from(data: LlmChunkGeneratedEventPayload): LlmChunkGeneratedEventData {
+    return new LlmChunkGeneratedEventData(data);
   }
 }

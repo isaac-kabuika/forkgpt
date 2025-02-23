@@ -23,28 +23,33 @@ export class SupabaseMessageRepository implements MessageRepository {
   }
   async createMessage(
     access_token: string,
-    message: Omit<Message, "id" | "createdAt" | "updatedAt">
+    message: Omit<Message, "id" | "createdAt" | "updatedAt">,
+    messageId?: string
   ): Promise<Message> {
+    const payload = {
+      content: message.content,
+      role: message.role,
+      parent_id: message.parentId,
+      topic_id: message.topicId,
+      user_id: message.userId,
+    };
     const { data, error } = await Supabase.client
       .from("messages")
       .insert([
-        {
-          content: message.content,
-          role: message.role,
-          parent_id: message.parentId,
-          topic_id: message.topicId,
-          user_id: message.userId,
-        },
+        messageId
+          ? {
+              ...payload,
+              id: messageId,
+            }
+          : payload,
       ] as Tables<"messages">[])
       .select()
       .single<Tables<"messages">>()
       .setHeader("Authorization", `Bearer ${access_token}`);
 
     if (error) {
-      throw new MessageError(
-        MessageErrorCode.UNAUTHORIZED,
-        "Failed to create message"
-      );
+      console.error(error);
+      throw error;
     }
 
     return this.mapDbMessageToDomain(data);

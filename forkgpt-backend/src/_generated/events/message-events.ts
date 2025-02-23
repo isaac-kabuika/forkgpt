@@ -10,7 +10,7 @@ export const messageEvents = {
   "message.updated": "message:message.updated",
   "message.delete": "message:message.delete",
   "message.deleted": "message:message.deleted",
-  "message.aiResponse.requested": "message:message.aiResponse.requested"
+  "message.aiResponse.partialMessage": "message:message.aiResponse.partialMessage"
 } as const;
 
 export type messageEventTypes = typeof messageEvents[keyof typeof messageEvents];
@@ -217,26 +217,26 @@ export class MessageDeletedEventData {
 }
 
 
-const MessageAiResponseRequestedSchema = z.object({ "messageId": z.string(), "topicId": z.string(), "userId": z.string(), "accessToken": z.string() }).strict();
+const MessageAiResponsePartialMessageSchema = z.object({ "id": z.string(), "content": z.string(), "role": z.enum(["user","assistant"]), "parentId": z.union([z.string(), z.null()]), "topicId": z.string(), "userId": z.string(), "createdAt": z.number(), "updatedAt": z.number(), "isFinalMessage": z.boolean() }).strict();
 
-export type MessageAiResponseRequestedEventPayload = z.infer<typeof MessageAiResponseRequestedSchema>;
+export type MessageAiResponsePartialMessageEventPayload = z.infer<typeof MessageAiResponsePartialMessageSchema>;
 
-export class MessageAiResponseRequestedEventData {
-  private readonly data: MessageAiResponseRequestedEventPayload;
+export class MessageAiResponsePartialMessageEventData {
+  private readonly data: MessageAiResponsePartialMessageEventPayload;
 
   constructor(data: unknown) {
     const payload = typeof data === 'object' && data !== null && 'data' in data
       ? (data as any).data
       : data;
 
-    this.data = MessageAiResponseRequestedSchema.parse(payload);
+    this.data = MessageAiResponsePartialMessageSchema.parse(payload);
   }
 
-  get payload(): MessageAiResponseRequestedEventPayload {
+  get payload(): MessageAiResponsePartialMessageEventPayload {
     return this.data;
   }
 
-  static from(data: MessageAiResponseRequestedEventPayload): MessageAiResponseRequestedEventData {
-    return new MessageAiResponseRequestedEventData(data);
+  static from(data: MessageAiResponsePartialMessageEventPayload): MessageAiResponsePartialMessageEventData {
+    return new MessageAiResponsePartialMessageEventData(data);
   }
 }

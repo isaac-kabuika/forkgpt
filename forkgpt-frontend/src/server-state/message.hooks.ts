@@ -78,16 +78,28 @@ export function useCreateMessage() {
     },
     onSuccess: (newMessage: Api.Message) => {
       if (activeThreadId) {
-        // Replace optimistic message with real one and invalidate to get AI response
         queryClient.setQueryData<Api.ThreadWithMessages>(
           threadKeys.messages(activeThreadId),
-          (old) => ({
-            ...old!,
-            messages:
-              old?.messages.map((msg) =>
-                msg.id.startsWith("temp-") ? newMessage : msg
-              ) || [],
-          })
+          (old) => {
+            if (!old) return undefined;
+
+            const existingIndex = old.messages.findIndex(
+              (msg) => msg.id === newMessage.id
+            );
+            if (existingIndex >= 0) {
+              const updatedMessages = [...old.messages];
+              updatedMessages[existingIndex] = newMessage;
+              return { ...old, messages: updatedMessages };
+            } else {
+              return {
+                ...old,
+                messages:
+                  old.messages.map((msg) =>
+                    msg.id.startsWith("temp-") ? newMessage : msg
+                  ) || [],
+              };
+            }
+          }
         );
 
         // Invalidate to get the AI response

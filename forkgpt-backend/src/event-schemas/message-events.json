@@ -206,12 +206,22 @@
         "additionalProperties": false
       }
     },
-    "message.aiResponse.requested": {
+    "message.aiResponse.partialMessage": {
       "schema": {
         "type": "object",
         "properties": {
-          "messageId": {
+          "id": {
             "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "assistant"]
+          },
+          "parentId": {
+            "type": ["string", "null"]
           },
           "topicId": {
             "type": "string"
@@ -219,11 +229,27 @@
           "userId": {
             "type": "string"
           },
-          "accessToken": {
-            "type": "string"
+          "createdAt": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "number"
+          },
+          "isFinalMessage": {
+            "type": "boolean"
           }
         },
-        "required": ["messageId", "topicId", "userId", "accessToken"],
+        "required": [
+          "id",
+          "content",
+          "role",
+          "parentId",
+          "topicId",
+          "userId",
+          "createdAt",
+          "updatedAt",
+          "isFinalMessage"
+        ],
         "additionalProperties": false
       }
     }
