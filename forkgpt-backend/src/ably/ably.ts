@@ -33,7 +33,6 @@ export class AblyService {
     const channel = this.client.channels.get(args.userId, {
       modes: ["publish"],
     });
-    if (args.eventName === Api.ably.EventName.THREAD_UPDATED)
-      await channel.publish(args.eventName, args.data);
+    await channel.publish(args.eventName, args.data);
   }
 }
