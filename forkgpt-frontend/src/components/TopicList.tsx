@@ -11,7 +11,7 @@ import {
   ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 import { setActiveTopic } from "../client-state/slices/topicSlice";
-import { useQueryParams } from "../hooks/useQueryParams";
+import { useQueryParams } from "../client-state/useQueryParams";
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");

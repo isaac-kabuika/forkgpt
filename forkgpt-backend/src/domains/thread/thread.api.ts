@@ -16,6 +16,13 @@ import {
 } from "../../_generated/events/thread-events";
 import { ThreadError, ThreadErrorCode } from "./thread.types";
 import * as ApiType from "forkgpt-api-types";
+import {
+  MessageAiResponsePartialMessageEventData,
+  MessageCreatedEventData,
+  messageEvents,
+} from "../../_generated/events/message-events";
+import { randomUUID } from "crypto";
+import { AblyService } from "../../ably/ably";
 
 let threadService: ThreadService;
 
@@ -140,10 +147,13 @@ export function initThreadApi(app: Application) {
     async (req: Request, res: Response) => {
       try {
         const createData = ApiType.createThreadRequestSchema.parse(req.body);
+        createData.id = createData.id ?? randomUUID();
+
+        const requestorCorrelationId = randomUUID();
 
         EventBus.instance.onceEvent({
           event: threadEvents["thread.created"],
-          correlationId: req.user.id,
+          correlationId: requestorCorrelationId,
           callback: (data: ThreadCreatedEventData) => {
             const response: ApiType.ThreadResponse = {
               thread: {
@@ -161,9 +171,83 @@ export function initThreadApi(app: Application) {
           },
         });
 
+        EventBus.instance.onceEvent({
+          event: threadEvents["thread.updated"],
+          correlationId: requestorCorrelationId,
+          callback: async (data: ThreadUpdatedEventData) => {
+            const thread = await threadService.getThread(
+              req.user.accessToken,
+              data.payload.id
+            );
+            if (!thread) {
+              console.error(
+                `Failed to update the thread name: id ${data.payload.id} not found.`
+              );
+              return;
+            }
+            AblyService.emitToClient({
+              userId: req.user.id,
+              eventName: ApiType.ably.EventName.THREAD_UPDATED,
+              data: ApiType.ably.threadUpdatedSchema.parse({
+                thread: {
+                  id: data.payload.id,
+                  topicId: thread.topicId,
+                  name: data.payload.name,
+                  leafMessageId: thread.leafMessageId,
+                  userId: data.payload.userId,
+                  rank: data.payload.rank,
+                  createdAt: thread.createdAt,
+                  updatedAt: new Date(),
+                },
+              } as ApiType.ably.ThreadUpdated),
+            });
+          },
+        });
+
+        const aiResponseChunkListener = EventBus.instance.onEvent({
+          event: messageEvents["message.aiResponse.partialMessage"],
+          correlationId: requestorCorrelationId,
+          callback: (data: MessageAiResponsePartialMessageEventData) => {
+            AblyService.emitToClient({
+              userId: req.user.id,
+              eventName: ApiType.ably.EventName.MESSAGE_UPDATED,
+              data: ApiType.ably.messageUpdatedSchema.parse({
+                message: {
+                  ...data.payload,
+                  createdAt: new Date(data.payload.createdAt),
+                  updatedAt: new Date(data.payload.updatedAt),
+                },
+                threadId: createData.id,
+              } as ApiType.ably.MessageUpdated),
+            });
+            if (data.payload.isFinalMessage) {
+              aiResponseChunkListener.destroy();
+            }
+          },
+        });
+
+        EventBus.instance.onceEvent({
+          event: messageEvents["message.created"],
+          correlationId: requestorCorrelationId,
+          callback: (data: MessageCreatedEventData) => {
+            AblyService.emitToClient({
+              userId: req.user.id,
+              eventName: ApiType.ably.EventName.MESSAGE_UPDATED,
+              data: ApiType.ably.messageUpdatedSchema.parse({
+                message: {
+                  ...data.payload,
+                  createdAt: new Date(data.payload.createdAt),
+                  updatedAt: new Date(data.payload.createdAt),
+                },
+                threadId: createData.id,
+              } as ApiType.ably.MessageUpdated),
+            });
+          },
+        });
+
         EventBus.instance.emitEvent({
           event: threadEvents["thread.create"],
-          correlationId: req.user.id,
+          correlationId: requestorCorrelationId,
           data: ThreadCreateEventData.from({
             ...createData,
             topicId: req.params.topicId,

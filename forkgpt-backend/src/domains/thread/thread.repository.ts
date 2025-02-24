@@ -3,6 +3,7 @@ import { Thread } from "./thread.types";
 
 export interface ThreadRepository {
   createThread(args: {
+    id?: string;
     accessToken: string;
     userId: string;
     topicId: string;

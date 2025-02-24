@@ -16,6 +16,7 @@ export type Thread = z.infer<typeof threadSchema>;
 
 // Request schemas
 export const createThreadRequestSchema = z.object({
+  id: z.string().uuid().optional(),
   name: z.string().min(1),
   leafMessageId: z.string().uuid().nullable(),
   leftThreadId: z.string().uuid().nullable(),

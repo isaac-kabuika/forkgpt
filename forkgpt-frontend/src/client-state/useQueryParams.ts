@@ -1,9 +1,9 @@
 import { useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "../client-state/hooks";
-import { setActiveTopic } from "../client-state/slices/topicSlice";
-import { setActiveThread } from "../client-state/slices/threadSlice";
-import { setLastThreadForTopic } from "../client-state/slices/threadHistorySlice";
+import { useAppDispatch, useAppSelector } from "./hooks";
+import { setActiveTopic } from "./slices/topicSlice";
+import { setActiveThread } from "./slices/threadSlice";
+import { setLastThreadForTopic } from "./slices/threadHistorySlice";
 
 export function useQueryParams() {
   const [searchParams, setSearchParams] = useSearchParams();

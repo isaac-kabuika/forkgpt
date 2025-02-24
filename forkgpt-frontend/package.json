@@ -28,7 +28,7 @@
     "ag-grid-react": "^33.0.4",
     "axios": "^1.7.9",
     "firebase": "^10.8.0",
-    "forkgpt-api-types": "file:../forkgpt-api-types/forkgpt-api-types-1.0.31.tgz",
+    "forkgpt-api-types": "file:../forkgpt-api-types/forkgpt-api-types-1.0.36.tgz",
     "gridstack": "^11.3.0",
     "react": "^18.3.1",
     "react-beautiful-dnd": "^13.1.1",

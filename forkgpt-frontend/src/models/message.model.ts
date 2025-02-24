@@ -2,7 +2,7 @@ import * as Api from "forkgpt-api-types";
 
 export interface Message {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system";
   content: string;
   parentId: string | null;
   createdAt: Date;

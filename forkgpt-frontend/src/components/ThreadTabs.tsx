@@ -6,7 +6,7 @@ import {
 import { useAppSelector, useAppDispatch } from "../client-state/hooks";
 import { setActiveThread } from "../client-state/slices/threadSlice";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useQueryParams } from "../hooks/useQueryParams";
+import { useQueryParams } from "../client-state/useQueryParams";
 import { Thread } from "../models/thread.model";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -129,14 +129,15 @@ export function ThreadTabs() {
   // Update synchronization logic
   useEffect(() => {
     if (threads) {
-      const serverIds = threads.map((t) => t.id).join(",");
-      const localIds = localThreads.map((t) => t.id).join(",");
+      // Simple deep comparison to detect changes
+      const threadsChanged =
+        JSON.stringify(threads) !== JSON.stringify(localThreads);
 
-      if (serverIds !== localIds) {
+      if (threadsChanged) {
         setLocalThreads(threads);
       }
     }
-  }, [threads]); // Removed isDragging dependency
+  }, [threads]); // Now properly detects content changes
 
   // Add container measurement and scroll adjustment
   const navRef = useRef<HTMLDivElement>(null);

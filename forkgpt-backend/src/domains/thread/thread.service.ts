@@ -21,9 +21,7 @@ import {
   LlmResponseGeneratedEventData,
   LlmResponseRequestedEventData,
 } from "../../_generated/events/llm-events";
-import { randomUUID } from "crypto";
 import {
-  MessageCreatedEventData,
   MessageCreateEventData,
   messageEvents,
 } from "../../_generated/events/message-events";
@@ -74,7 +72,16 @@ export class ThreadService {
     // Handle thread creation request
     EventBus.instance.onEvent({
       event: threadEvents["thread.create"],
-      callback: async (threadCreateEventData: ThreadCreateEventData) => {
+      callback: async (
+        threadCreateEventData: ThreadCreateEventData,
+        threadCreateRequestorCorrelationId
+      ) => {
+        if (!threadCreateRequestorCorrelationId) {
+          console.error(
+            "Thread.create missing requestor correlation id. Aborting."
+          );
+          return;
+        }
         try {
           // Only allow creating a thread without parent if no threads exist
           if (!threadCreateEventData.payload.leafMessageId) {
@@ -91,74 +98,93 @@ export class ThreadService {
             }
           }
 
-          const llmResponseGeneratedEventData =
-            await EventBus.instance.emitAwait<
-              LlmResponseRequestedEventData,
-              LlmResponseGeneratedEventData
-            >({
-              listenEvent: {
-                event: llmEvents["llm.response.generated"],
-              },
-              emitEvent: {
-                event: llmEvents["llm.response.requested"],
-                data: LlmResponseRequestedEventData.from({
-                  model: "gpt-4o-mini",
-                  messages: [
-                    {
-                      role: "assistant",
-                      content:
-                        "You are the fastest text title builder. Only ouput 3 or less words that's a good title for the user text.",
-                    },
-                    {
-                      role: "user",
-                      content: threadCreateEventData.payload.newMessageContent,
-                    },
-                  ],
-                }),
-              },
-            });
-
-          const thread = await this.threadRepository.createThread({
-            accessToken: threadCreateEventData.payload.accessToken,
-            userId: threadCreateEventData.payload.userId,
-            topicId: threadCreateEventData.payload.topicId,
-            name: llmResponseGeneratedEventData.payload.content,
-            leafMessageId: threadCreateEventData.payload.leafMessageId ?? null,
-            leftThreadId: threadCreateEventData.payload.leftThreadId ?? null,
-            rightThreadId: threadCreateEventData.payload.rightThreadId ?? null,
-          });
-
-          await EventBus.instance.emitAwait<
-            MessageCreateEventData,
-            MessageCreatedEventData
-          >({
-            listenEvent: {
-              event: messageEvents["message.created"],
-            },
-            emitEvent: {
-              event: messageEvents["message.create"],
-              data: MessageCreateEventData.from({
-                content: threadCreateEventData.payload.newMessageContent,
-                role: "user",
-                threadId: thread.id,
-                topicId: thread.topicId,
-                userId: thread.userId,
-                accessToken: threadCreateEventData.payload.accessToken,
-              }),
-            },
-          });
+          const newThreadWithoutName = await this.threadRepository.createThread(
+            {
+              id: threadCreateEventData.payload.id,
+              accessToken: threadCreateEventData.payload.accessToken,
+              userId: threadCreateEventData.payload.userId,
+              topicId: threadCreateEventData.payload.topicId,
+              name: "Loading",
+              leafMessageId:
+                threadCreateEventData.payload.leafMessageId ?? null,
+              leftThreadId: threadCreateEventData.payload.leftThreadId ?? null,
+              rightThreadId:
+                threadCreateEventData.payload.rightThreadId ?? null,
+            }
+          );
 
           EventBus.instance.emitEvent({
             event: threadEvents["thread.created"],
-            correlationId: threadCreateEventData.payload.userId,
+            correlationId: threadCreateRequestorCorrelationId,
             data: ThreadCreatedEventData.from({
-              id: thread.id,
-              topicId: thread.topicId,
-              name: thread.name,
-              leafMessageId: thread.leafMessageId,
-              userId: thread.userId,
-              rank: thread.rank,
-              createdAt: thread.createdAt.getTime(),
+              id: newThreadWithoutName.id,
+              topicId: newThreadWithoutName.topicId,
+              name: newThreadWithoutName.name,
+              leafMessageId: newThreadWithoutName.leafMessageId,
+              userId: newThreadWithoutName.userId,
+              rank: newThreadWithoutName.rank,
+              createdAt: newThreadWithoutName.createdAt.getTime(),
+            }),
+          });
+
+          const llmRequestCorrelationId = threadCreateRequestorCorrelationId;
+
+          /** Generates the thread name and emits the thread with the name update. */
+          EventBus.instance.onceEvent({
+            event: llmEvents["llm.response.generated"],
+            correlationId: llmRequestCorrelationId,
+            callback: async (
+              llmResponseGeneratedEventData: LlmResponseGeneratedEventData
+            ) => {
+              const newThreadWithName =
+                await this.threadRepository.updateThread({
+                  threadId: newThreadWithoutName.id,
+                  accessToken: threadCreateEventData.payload.accessToken,
+                  updates: {
+                    name: llmResponseGeneratedEventData.payload.content,
+                  },
+                });
+              EventBus.instance.emitEvent({
+                event: threadEvents["thread.updated"],
+                correlationId: threadCreateRequestorCorrelationId,
+                data: ThreadUpdatedEventData.from({
+                  id: newThreadWithName.id,
+                  name: newThreadWithName.name,
+                  userId: newThreadWithName.userId,
+                  rank: newThreadWithName.rank,
+                }),
+              });
+            },
+          });
+          EventBus.instance.emitEvent({
+            event: llmEvents["llm.response.requested"],
+            correlationId: llmRequestCorrelationId,
+            data: LlmResponseRequestedEventData.from({
+              model: "gpt-4o-mini",
+              messages: [
+                {
+                  role: "assistant",
+                  content:
+                    "You are the fastest text title builder. Only ouput 3 or less words that's a good title for the user text.",
+                },
+                {
+                  role: "user",
+                  content: threadCreateEventData.payload.newMessageContent,
+                },
+              ],
+            }),
+          });
+
+          EventBus.instance.emitEvent({
+            event: messageEvents["message.create"],
+            correlationId: threadCreateRequestorCorrelationId,
+            data: MessageCreateEventData.from({
+              content: threadCreateEventData.payload.newMessageContent,
+              role: "user",
+              threadId: newThreadWithoutName.id,
+              topicId: newThreadWithoutName.topicId,
+              userId: newThreadWithoutName.userId,
+              accessToken: threadCreateEventData.payload.accessToken,
             }),
           });
         } catch (error) {

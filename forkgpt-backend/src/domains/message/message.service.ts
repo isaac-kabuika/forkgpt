@@ -69,7 +69,12 @@ export class MessageService {
       },
     });
 
-    // Handle message creation request
+    /**
+     * Handle message creation request
+     * @emits {MessageCreatedEventData} message.created - Emits the created user message
+     * @emits {MessageAiResponsePartialEventData} message.aiResponse.partialMessage - Streams AI response chunks as messages with the same ID
+     * @emits {ThreadUpdateLeafEventData} thread.updateLeaf - Updates thread's leaf message after creating user and AI messages
+     */
     EventBus.instance.onEvent({
       event: messageEvents["message.create"],
       callback: async (
@@ -104,6 +109,20 @@ export class MessageService {
               }),
             });
           }
+
+          EventBus.instance.emitEvent({
+            event: messageEvents["message.created"],
+            correlationId: messageCreateEventCorrelationId,
+            data: MessageCreatedEventData.from({
+              id: userMessage.id,
+              content: userMessage.content,
+              role: userMessage.role,
+              parentId: userMessage.parentId,
+              topicId: userMessage.topicId,
+              userId: userMessage.userId,
+              createdAt: userMessage.createdAt.getTime(),
+            }),
+          });
 
           const llmRequestorCorrelationId = randomUUID();
           const aiResponseMessageId = randomUUID();
@@ -165,36 +184,25 @@ export class MessageService {
                   }),
                 });
               }
-              EventBus.instance.emitEvent({
-                event: messageEvents["message.created"],
-                correlationId: messageCreateEventCorrelationId,
-                data: MessageCreatedEventData.from({
-                  id: aiMessage.id,
-                  content: aiMessage.content,
-                  role: aiMessage.role,
-                  parentId: aiMessage.parentId,
-                  topicId: aiMessage.topicId,
-                  userId: aiMessage.userId,
-                  createdAt: aiMessage.createdAt.getTime(),
-                }),
-              });
             },
           });
+          const llmFormattedMessages = messages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          }));
           EventBus.instance.emitEvent({
             event: llmEvents["llm.response.requested"],
             correlationId: llmRequestorCorrelationId,
             data: LlmResponseRequestedEventData.from({
               model: "gpt-4o",
               messages: [
+                ...llmFormattedMessages.slice(0, messages.length - 1),
                 {
                   role: "system",
                   content:
-                    "You are a useful assistant, expert in markdow. Always responds in clear, pretty markdown.",
+                    "You are a useful ai assistant. Always prioritize markdown over plain text without ever mentioning it.",
                 },
-                ...messages.map((msg) => ({
-                  role: msg.role,
-                  content: msg.content,
-                })),
+                llmFormattedMessages[messages.length - 1],
               ],
             }),
           });

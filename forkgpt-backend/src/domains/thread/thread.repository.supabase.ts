@@ -7,6 +7,7 @@ import { Tables } from "../../_generated/database/database.types";
 export class SupabaseThreadRepository implements ThreadRepository {
   async createThread(args: {
     accessToken: string;
+    id?: string;
     userId: string;
     topicId: string;
     name: string;
@@ -77,17 +78,21 @@ export class SupabaseThreadRepository implements ThreadRepository {
       newRank = rightThread.rank / 2;
     }
 
+    const threadRowData = {
+      topic_id: topicId,
+      name,
+      leaf_message_id: leafMessageId,
+      user_id: userId,
+      rank: newRank,
+    };
     const { data, error } = await Supabase.client
       .from("threads")
       .insert([
-        {
-          topic_id: topicId,
-          name,
-          leaf_message_id: leafMessageId,
-          user_id: userId,
-          rank: newRank,
-        },
-      ] satisfies Omit<Tables<"threads">, "id" | "created_at" | "updated_at">[])
+        args.id ? { ...threadRowData, id: args.id } : threadRowData,
+      ] satisfies (
+        | Omit<Tables<"threads">, "id" | "created_at" | "updated_at">
+        | Omit<Tables<"threads">, "created_at" | "updated_at">
+      )[])
       .select()
       .single<Tables<"threads">>()
       .setHeader("Authorization", `Bearer ${accessToken}`);

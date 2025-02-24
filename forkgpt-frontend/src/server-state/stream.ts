@@ -1,12 +1,13 @@
-import { Realtime } from "ably";
+import { Realtime, RealtimeChannel, Channel } from "ably";
 import store from "../client-state/store";
 import { queryClient } from "./queryClient";
 import { messageKeys } from "./message.api";
 import { threadKeys } from "./thread.api";
 import * as Api from "forkgpt-api-types";
+import { mapThread } from "../models/thread.model";
 
 let ablyClient: Realtime | null = null;
-let channel: any = null;
+let channel: RealtimeChannel | Channel;
 
 // Store the unsubscribe function for the store listener
 let unsubscribeStore: CallableFunction;
@@ -27,65 +28,73 @@ const initializeStreamListener = () => {
       channel = ablyClient.channels.get(userId);
       console.debug("Initialized streaming.");
       // Set up message handlers
-      channel.subscribe(
-        Api.ably.EventName.MESSAGE_UPDATED,
-        (ablyMessage: { data: Api.ably.MessageUpdated }) => {
-          const updatedMessage = ablyMessage.data.message;
-          const threadId = ablyMessage.data.threadId;
+      channel.subscribe(Api.ably.EventName.MESSAGE_UPDATED, (ablyMessage) => {
+        const data: Api.ably.MessageUpdated = ablyMessage.data;
+        const updatedMessage = data.message;
+        const threadId = data.threadId;
+        queryClient.setQueryData(
+          messageKeys.detail(updatedMessage.id),
+          updatedMessage
+        );
+        if (threadId) {
+          queryClient.setQueryData<Api.ThreadWithMessages>(
+            threadKeys.messages(threadId),
+            (oldData) => {
+              if (!oldData) return oldData;
 
-          // Update or insert the message detail cache
-          queryClient.setQueryData(
-            messageKeys.detail(updatedMessage.id),
-            updatedMessage
-          );
+              const messageExists = oldData.messages.some(
+                (msg) => msg.id === updatedMessage.id
+              );
 
-          // Update or insert the message in thread messages cache
-          if (threadId) {
-            queryClient.setQueryData<Api.ThreadWithMessages>(
-              threadKeys.messages(threadId),
-              (oldData) => {
-                if (!oldData) return oldData;
-
-                const messageExists = oldData.messages.some(
-                  (msg) => msg.id === updatedMessage.id
-                );
-
-                return {
-                  ...oldData,
-                  messages: messageExists
-                    ? oldData.messages.map((msg) =>
-                        msg.id === updatedMessage.id ? updatedMessage : msg
-                      )
-                    : [...oldData.messages, updatedMessage],
-                };
-              }
-            );
-          }
-
-          // Update or insert message in responses cache if it exists
-          if (updatedMessage.parentId) {
-            queryClient.setQueryData<Api.Message[]>(
-              messageKeys.responses(updatedMessage.parentId),
-              (oldData) => {
-                if (!oldData) return [updatedMessage];
-
-                const messageExists = oldData.some(
-                  (msg) => msg.id === updatedMessage.id
-                );
-
-                return messageExists
-                  ? oldData.map((msg) =>
+              return {
+                ...oldData,
+                messages: messageExists
+                  ? oldData.messages.map((msg) =>
                       msg.id === updatedMessage.id ? updatedMessage : msg
                     )
-                  : [...oldData, updatedMessage];
-              }
+                  : [...oldData.messages, updatedMessage],
+              };
+            }
+          );
+        }
+        if (updatedMessage.parentId) {
+          queryClient.setQueryData<Api.Message[]>(
+            messageKeys.responses(updatedMessage.parentId),
+            (oldData) => {
+              if (!oldData) return [updatedMessage];
+
+              const messageExists = oldData.some(
+                (msg) => msg.id === updatedMessage.id
+              );
+
+              return messageExists
+                ? oldData.map((msg) =>
+                    msg.id === updatedMessage.id ? updatedMessage : msg
+                  )
+                : [...oldData, updatedMessage];
+            }
+          );
+        }
+      });
+
+      channel.subscribe(Api.ably.EventName.THREAD_UPDATED, (ablyMessage) => {
+        const data: Api.ably.ThreadUpdated = ablyMessage.data;
+        const updatedThread = mapThread(data.thread);
+
+        queryClient.setQueryData<Api.Thread[]>(
+          threadKeys.list(updatedThread.topicId),
+          (oldData) => {
+            if (!oldData) return oldData;
+            return oldData.map((thread) =>
+              thread.id === updatedThread.id ? updatedThread : thread
             );
           }
-        }
-      );
+        );
 
-      channel.subscribe("thread.updated", () => {
-        // Future thread update handling
+        queryClient.setQueryData(
+          threadKeys.detail(updatedThread.id),
+          updatedThread
+        );
       });
 
       // Remove the store subscription after initialization

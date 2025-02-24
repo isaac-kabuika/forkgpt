@@ -4,12 +4,9 @@ import { useAppDispatch, useAppSelector } from "../client-state/hooks";
 import { setActiveThread } from "../client-state/slices/threadSlice";
 import { removeThreadFromHistory } from "../client-state/slices/threadHistorySlice";
 import { Thread, mapThread } from "../models/thread.model";
-import { useQueryParams } from "../hooks/useQueryParams";
+import { useQueryParams } from "../client-state/useQueryParams";
 import { supabase } from "../supabase";
 import { useEffect } from "react";
-import { setLastThreadForTopic } from "../client-state/slices/threadHistorySlice";
-
-const TEMP_THREAD_ID = "temp_thread_id";
 
 export function useThreads(topicId: string) {
   return useQuery({
@@ -27,28 +24,25 @@ export function useThreadMessages(threadId: string) {
   const activeTopicId = useAppSelector((state) => state.topic.activeTopicId);
   const userId = useAppSelector((state) => state.auth.user?.id);
 
-  // Add check for temporary thread ID
-  const isTempThread = threadId === TEMP_THREAD_ID;
-
-  // Modify all query enable flags
   const threadQuery = useQuery({
     queryKey: threadKeys.detail(threadId),
-    queryFn: () => threadApi.getThread(threadId),
-    enabled: !!threadId && !isTempThread, // Prevent fetch for temp IDs
+    queryFn: async () => {
+      const thread = await threadApi.getThread(threadId);
+      return mapThread(thread);
+    },
+    enabled: !!threadId,
   });
 
   const messagesQuery = useQuery({
     queryKey: threadKeys.messages(threadId),
     queryFn: () => threadApi.getThreadMessages(threadId),
-    enabled: !!threadId && !isTempThread,
-    staleTime: 0, // Force immediate refresh when activated
+    enabled: !!threadId,
+    staleTime: 0,
   });
 
-  // Modify subscription effect
   useEffect(() => {
-    if (isTempThread || !threadId || !activeTopicId || !userId) return;
+    if (!threadId || !activeTopicId || !userId) return;
 
-    // Subscribe to messages for the current topic and user
     const subscription = supabase
       .channel("messages")
       .on(
@@ -60,7 +54,6 @@ export function useThreadMessages(threadId: string) {
           filter: `topic_id=eq.${activeTopicId} AND user_id=eq.${userId}`,
         },
         async () => {
-          // Refresh both thread and messages when a message changes
           queryClient.invalidateQueries({
             queryKey: threadKeys.detail(threadId),
           });
@@ -74,9 +67,8 @@ export function useThreadMessages(threadId: string) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [threadId, activeTopicId, userId, queryClient, isTempThread]);
+  }, [threadId, activeTopicId, userId, queryClient]);
 
-  // Combine the results
   return {
     data:
       messagesQuery.data && threadQuery.data
@@ -111,102 +103,32 @@ export function useCreateThread() {
       rightThreadId?: string;
       newMessageContent: string;
     }) => {
-      dispatch(setActiveThread(null));
-
-      return {
-        ...(await threadApi.createThread(topicId, {
-          name,
-          leafMessageId: leafMessageId ?? null,
-          leftThreadId: leftThreadId ?? null,
-          rightThreadId: rightThreadId ?? null,
-          newMessageContent: newMessageContent,
-        })),
-        TEMP_THREAD_ID,
-      };
-    },
-    onMutate: async (variables) => {
-      const { topicId, name, leftThreadId, rightThreadId } = variables;
-
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: threadKeys.list(topicId) });
-
-      // Get current threads
-      const previousThreads =
-        queryClient.getQueryData<Thread[]>(threadKeys.list(topicId)) || [];
-
-      // Calculate temporary rank
-      let tempRank = 0;
-      if (leftThreadId) {
-        const leftThread = previousThreads.find((t) => t.id === leftThreadId);
-        tempRank = leftThread ? leftThread.rank + 1 : previousThreads.length;
-      } else if (rightThreadId) {
-        const rightThread = previousThreads.find((t) => t.id === rightThreadId);
-        tempRank = rightThread ? rightThread.rank - 1 : 0;
-      } else {
-        tempRank = previousThreads.length;
-      }
-
-      // Create optimistic thread
-      const optimisticThread: Thread = {
-        id: TEMP_THREAD_ID,
-        topicId,
+      return threadApi.createThread(topicId, {
+        id: crypto.randomUUID(),
         name,
-        leafMessageId: null,
-        userId: "", // Will be populated by real response
-        rank: tempRank,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Optimistically update cache
-      queryClient.setQueryData<Thread[]>(threadKeys.list(topicId), (old = []) =>
-        [...old, optimisticThread].sort((a, b) => a.rank - b.rank)
-      );
-
-      // Activate the optimistic thread
-      dispatch(setActiveThread(TEMP_THREAD_ID));
-      setThreadId(TEMP_THREAD_ID);
-
-      return { previousThreads, tempId: TEMP_THREAD_ID };
-    },
-    onSuccess: (realThread, variables, _) => {
-      // Replace optimistic thread with real data
-      queryClient.setQueryData<Thread[]>(
-        threadKeys.list(variables.topicId),
-        (old = []) =>
-          old
-            .filter((t) => t.id !== TEMP_THREAD_ID)
-            .concat(realThread)
-            .sort((a, b) => a.rank - b.rank)
-      );
-
-      // Force immediate update of active thread
-      dispatch(setActiveThread(realThread.id));
-      setThreadId(realThread.id);
-
-      // Invalidate and refetch all related queries
-      queryClient.invalidateQueries({
-        queryKey: threadKeys.messages(realThread.id),
+        leafMessageId: leafMessageId ?? null,
+        leftThreadId: leftThreadId ?? null,
+        rightThreadId: rightThreadId ?? null,
+        newMessageContent: newMessageContent,
       });
+    },
+    onSuccess: (newThread, variables) => {
       queryClient.invalidateQueries({
         queryKey: threadKeys.list(variables.topicId),
       });
 
-      // Update thread history
-      dispatch(
-        setLastThreadForTopic({
-          topicId: variables.topicId,
-          threadId: realThread.id,
-        })
-      );
+      queryClient.removeQueries({
+        queryKey: threadKeys.messages(newThread.id),
+      });
     },
-    onError: (_, variables, context) => {
-      // Rollback optimistic update
-      if (context?.previousThreads) {
-        queryClient.setQueryData(
-          threadKeys.list(variables.topicId),
-          context.previousThreads
-        );
+    onSettled: (newThread) => {
+      if (newThread) {
+        // invalidateQueries & removeQueries seem to have a race condition with the dispatch for activeThread.
+        // This bug is fixed when we move the dispatch calls to the end of the event loop.
+        setTimeout(() => {
+          dispatch(setActiveThread(newThread.id));
+          setThreadId(newThread.id);
+        }, 0);
       }
     },
   });
@@ -234,12 +156,10 @@ export function useUpdateThread() {
       });
     },
     onSuccess: (updatedThread) => {
-      // Invalidate threads list to reflect rank changes
       queryClient.invalidateQueries({
         queryKey: threadKeys.list(updatedThread.topicId),
       });
 
-      // Update thread in cache
       queryClient.setQueryData(
         threadKeys.detail(updatedThread.id),
         updatedThread
@@ -256,7 +176,6 @@ export function useDeleteThread() {
   return useMutation({
     mutationFn: threadApi.deleteThread,
     onSuccess: (_, deletedThreadId) => {
-      // Remove thread detail and messages from cache
       queryClient.removeQueries({
         queryKey: threadKeys.detail(deletedThreadId),
       });
@@ -264,7 +183,6 @@ export function useDeleteThread() {
         queryKey: threadKeys.messages(deletedThreadId),
       });
 
-      // Update threads list cache to remove the deleted thread
       if (activeTopicId) {
         queryClient.setQueryData<Thread[]>(
           threadKeys.list(activeTopicId),
@@ -272,9 +190,7 @@ export function useDeleteThread() {
         );
       }
 
-      // Clear active thread if it was deleted
       dispatch(setActiveThread(null));
-      // Remove thread from history
       dispatch(removeThreadFromHistory(deletedThreadId));
     },
   });

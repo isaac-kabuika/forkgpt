@@ -27,12 +27,13 @@ export class AblyService {
   static async emitToClient(args: {
     userId: string;
     eventName: Api.ably.EventName;
-    data: Api.ably.MessageUpdated;
+    data: Api.ably.MessageUpdated | Api.ably.ThreadUpdated;
   }) {
     // Create the channel if it doesn't exist, or get existing one
     const channel = this.client.channels.get(args.userId, {
       modes: ["publish"],
     });
-    await channel.publish(args.eventName, args.data);
+    if (args.eventName === Api.ably.EventName.THREAD_UPDATED)
+      await channel.publish(args.eventName, args.data);
   }
 }

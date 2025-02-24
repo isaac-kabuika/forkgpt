@@ -24,7 +24,7 @@ export function Message({ message, threadId }: MessageProps) {
   const { mutate: createThread } = useCreateThread();
   const { data: threads } = useThreads(activeTopicId || "");
 
-  const handleBranchSubmit = async (content: string) => {
+  const handleBranchSubmit = async (content: string, leafMessageId: string) => {
     if (!activeTopicId) return;
 
     try {
@@ -35,7 +35,7 @@ export function Message({ message, threadId }: MessageProps) {
       createThread({
         topicId: activeTopicId,
         name: `${parentThread.name} (branch)`,
-        leafMessageId: parentThread.leafMessageId ?? undefined,
+        leafMessageId: leafMessageId ?? undefined,
         leftThreadId: threadList[leftThreadIdIndex]?.id,
         rightThreadId: threadList[leftThreadIdIndex + 1]?.id,
         newMessageContent: content,
@@ -65,9 +65,9 @@ export function Message({ message, threadId }: MessageProps) {
       >
         {message.role === "assistant" && (
           <>
-            <div className="absolute -top-2 -left-2 w-6 h-6 border border-gray-200 rounded-md flex items-center justify-center bg-white">
+            {/* <div className="absolute -top-2 -left-2 w-6 h-6 border border-gray-200 rounded-md flex items-center justify-center bg-white">
               <span className="text-xs text-gray-900 font-medium">GL</span>
-            </div>
+            </div> */}
 
             <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
@@ -92,7 +92,9 @@ export function Message({ message, threadId }: MessageProps) {
               >
                 <BranchInput
                   onClose={() => setShowBranchInput(false)}
-                  onSubmit={handleBranchSubmit}
+                  onSubmit={(content: string) =>
+                    handleBranchSubmit(content, message.id)
+                  }
                 />
               </div>
             )}
