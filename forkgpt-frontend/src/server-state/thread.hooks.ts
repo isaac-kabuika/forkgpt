@@ -121,14 +121,18 @@ export function useCreateThread() {
         queryKey: threadKeys.messages(newThread.id),
       });
     },
-    onSettled: (newThread) => {
+    onSettled: (newThread, _, variables) => {
       if (newThread) {
-        // invalidateQueries & removeQueries seem to have a race condition with the dispatch for activeThread.
-        // This bug is fixed when we move the dispatch calls to the end of the event loop.
-        setTimeout(() => {
-          dispatch(setActiveThread(newThread.id));
-          setThreadId(newThread.id);
-        }, 0);
+        const intervalId = setInterval(() => {
+          const threads = queryClient.getQueryData<Thread[]>(
+            threadKeys.list(variables.topicId)
+          );
+          if (threads?.some((t) => t.id === newThread.id)) {
+            dispatch(setActiveThread(newThread.id));
+            setThreadId(newThread.id);
+            clearInterval(intervalId);
+          }
+        }, 100);
       }
     },
   });
