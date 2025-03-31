@@ -33,12 +33,21 @@ export function TopicList({ isCollapsed, onToggleCollapse }: TopicListProps) {
     setTopicId(topicId);
   };
 
-  const createTopic = () => {
+  const resetTopic = () => {
     dispatch(setActiveThread(null));
     setThreadId(null);
     dispatch(setActiveTopic(null));
     setTopicId(null);
     navigate("/");
+  };
+
+  const deleteTopicHandler = (topicId: string) => {
+    deleteTopic(topicId);
+    resetTopic();
+  };
+
+  const createTopic = () => {
+    resetTopic();
   };
 
   if (isLoading) {
@@ -132,7 +141,7 @@ export function TopicList({ isCollapsed, onToggleCollapse }: TopicListProps) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteTopic(topic.id);
+                        deleteTopicHandler(topic.id);
                       }}
                       className={classNames(
                         "ml-2 p-1 text-black rounded opacity-0",

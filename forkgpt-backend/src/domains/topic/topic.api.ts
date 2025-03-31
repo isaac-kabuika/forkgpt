@@ -10,9 +10,12 @@ import {
   TopicCreateEventData,
   TopicDeleteEventData,
   TopicUpdateEventData,
+  TopicUpdatedEventData,
 } from "../../_generated/events/topic-events";
 import { TopicError, TopicErrorCode } from "./topic.types";
 import * as ApiType from "forkgpt-api-types";
+import { randomUUID } from "crypto";
+import { AblyService } from "../../ably/ably";
 
 let topicService: TopicService;
 
@@ -24,9 +27,10 @@ export function initTopicApi(app: Application) {
   // List topics
   app.get("/api/topics", async (req: Request, res: Response) => {
     try {
+      const requestorCorrelationId = randomUUID();
       EventBus.instance.onceEvent({
         event: topicEvents["topic.list.fetched"],
-        correlationId: req.user.id,
+        correlationId: requestorCorrelationId,
         callback: (data: TopicListFetchedEventData) => {
           const response: ApiType.TopicListResponse = {
             topics: data.payload.topics.map((topic) => ({
@@ -43,7 +47,7 @@ export function initTopicApi(app: Application) {
 
       EventBus.instance.emitEvent({
         event: topicEvents["topic.list.requested"],
-        correlationId: req.user.id,
+        correlationId: requestorCorrelationId,
         data: TopicListRequestedEventData.from({
           userId: req.user.id,
           accessToken: req.user.accessToken,
@@ -57,11 +61,12 @@ export function initTopicApi(app: Application) {
   // Create topic
   app.post("/api/topics", async (req: Request, res: Response) => {
     try {
+      const requestorCorrelationId = randomUUID();
       const createData = ApiType.createTopicRequestSchema.parse(req.body);
 
       EventBus.instance.onceEvent({
         event: topicEvents["topic.created"],
-        correlationId: req.user.id,
+        correlationId: requestorCorrelationId,
         callback: (data: TopicCreatedEventData) => {
           const response: ApiType.TopicResponse = {
             topic: {
@@ -76,13 +81,43 @@ export function initTopicApi(app: Application) {
         },
       });
 
+      EventBus.instance.onceEvent({
+        event: topicEvents["topic.updated"],
+        correlationId: requestorCorrelationId,
+        callback: async (data: TopicUpdatedEventData) => {
+          const topic = await topicService.getTopic(
+            req.user.accessToken,
+            data.payload.id
+          );
+          if (!topic) {
+            console.error(
+              `Failed to update the topic name: id ${data.payload.id} not found.`
+            );
+            return;
+          }
+          AblyService.emitToClient({
+            userId: req.user.id,
+            eventName: ApiType.ably.EventName.TOPIC_UPDATED,
+            data: ApiType.ably.topicUpdatedSchema.parse({
+              topic: {
+                id: data.payload.id,
+                userId: data.payload.userId,
+                title: data.payload.title,
+                createdAt: topic.createdAt,
+                updatedAt: new Date(),
+              },
+            } as ApiType.ably.TopicUpdated),
+          });
+        },
+      });
+
       EventBus.instance.emitEvent({
         event: topicEvents["topic.create"],
-        correlationId: req.user.id,
+        correlationId: requestorCorrelationId,
         data: TopicCreateEventData.from({
           accessToken: req.user.accessToken,
           userId: req.user.id,
-          title: createData.title,
+          newMessageContent: createData.newMessageContent,
         }),
       });
     } catch (error) {
@@ -93,6 +128,7 @@ export function initTopicApi(app: Application) {
   // Update topic
   app.patch("/api/topics/:id", async (req: Request, res: Response) => {
     try {
+      const requestorCorrelationId = randomUUID();
       const updateData = ApiType.updateTopicRequestSchema.parse(req.body);
       const topic = await topicService.getTopic(
         req.user.accessToken,
@@ -109,7 +145,7 @@ export function initTopicApi(app: Application) {
 
       EventBus.instance.onceEvent({
         event: topicEvents["topic.updated"],
-        correlationId: req.params.id,
+        correlationId: requestorCorrelationId,
         callback: (data) => {
           const response: ApiType.TopicResponse = {
             topic: {
@@ -126,7 +162,7 @@ export function initTopicApi(app: Application) {
 
       EventBus.instance.emitEvent({
         event: topicEvents["topic.update"],
-        correlationId: req.params.id,
+        correlationId: requestorCorrelationId,
         data: TopicUpdateEventData.from({
           id: req.params.id,
           title: updateData.title,
@@ -141,6 +177,7 @@ export function initTopicApi(app: Application) {
   // Delete topic
   app.delete("/api/topics/:id", async (req: Request, res: Response) => {
     try {
+      const requestorCorrelationId = randomUUID();
       const topic = await topicService.getTopic(
         req.user.accessToken,
         req.params.id
@@ -156,7 +193,7 @@ export function initTopicApi(app: Application) {
 
       EventBus.instance.onceEvent({
         event: topicEvents["topic.deleted"],
-        correlationId: req.user.id,
+        correlationId: requestorCorrelationId,
         callback: () => {
           res.status(204).send();
         },
@@ -164,7 +201,7 @@ export function initTopicApi(app: Application) {
 
       EventBus.instance.emitEvent({
         event: topicEvents["topic.delete"],
-        correlationId: req.user.id,
+        correlationId: requestorCorrelationId,
         data: TopicDeleteEventData.from({
           id: req.params.id,
           userId: req.user.id,

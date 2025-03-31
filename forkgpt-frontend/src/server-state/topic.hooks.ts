@@ -33,7 +33,12 @@ export function useCreateTopic() {
   const { setTopicId } = useQueryParams();
 
   return useMutation({
-    mutationFn: topicApi.createTopic,
+    mutationFn: (newMessageContent: string) => {
+      const data = Api.createTopicRequestSchema.parse({
+        newMessageContent,
+      });
+      return topicApi.createTopic(data);
+    },
     onSuccess: (newTopic: Api.Topic) => {
       // Update topics list cache
       queryClient.setQueryData<Api.Topic[]>(topicKeys.lists(), (old = []) => [

@@ -12,6 +12,11 @@ import {
 } from "../../_generated/events/topic-events";
 import { TopicRepository } from "./topic.repository";
 import { TopicError, TopicErrorCode } from "./topic.types";
+import {
+  llmEvents,
+  LlmResponseGeneratedEventData,
+  LlmResponseRequestedEventData,
+} from "../../_generated/events/llm-events";
 
 export class TopicService {
   constructor(private readonly topicRepository: TopicRepository) {}
@@ -24,16 +29,19 @@ export class TopicService {
     // Handle list topics request
     EventBus.instance.onEvent({
       event: topicEvents["topic.list.requested"],
-      callback: async (event: TopicListRequestedEventData) => {
+      callback: async (
+        event: TopicListRequestedEventData,
+        topicListRequestorCorrelationId
+      ) => {
         try {
-          const topics = await this.topicRepository.listTopics(
-            event.payload.accessToken,
-            event.payload.userId
-          );
+          const topics = await this.topicRepository.listTopics({
+            accessToken: event.payload.accessToken,
+            userId: event.payload.userId,
+          });
 
           EventBus.instance.emitEvent({
             event: topicEvents["topic.list.fetched"],
-            correlationId: event.payload.userId,
+            correlationId: topicListRequestorCorrelationId,
             data: TopicListFetchedEventData.from({
               userId: event.payload.userId,
               topics: topics.map((topic) => ({
@@ -56,17 +64,26 @@ export class TopicService {
     // Handle topic creation request
     EventBus.instance.onEvent({
       event: topicEvents["topic.create"],
-      callback: async (event: TopicCreateEventData) => {
-        try {
-          const topic = await this.topicRepository.createTopic(
-            event.payload.accessToken,
-            event.payload.userId,
-            event.payload.title
+      callback: async (
+        topicCreateEventData: TopicCreateEventData,
+        topicCreateRequestorCorrelationId
+      ) => {
+        if (!topicCreateRequestorCorrelationId) {
+          console.error(
+            "Topic.create missing requestor correlation id. Aborting."
           );
+          return;
+        }
+        try {
+          const topic = await this.topicRepository.createTopic({
+            accessToken: topicCreateEventData.payload.accessToken,
+            userId: topicCreateEventData.payload.userId,
+            title: "Loading...",
+          });
 
           EventBus.instance.emitEvent({
             event: topicEvents["topic.created"],
-            correlationId: event.payload.userId,
+            correlationId: topicCreateRequestorCorrelationId,
             data: TopicCreatedEventData.from({
               id: topic.id,
               title: topic.title,
@@ -74,7 +91,64 @@ export class TopicService {
               createdAt: topic.createdAt.getTime(),
             }),
           });
+
+          const llmRequestCorrelationId = topicCreateRequestorCorrelationId;
+
+          /** Generates the topic title using LLM and emits the topic updated event. */
+          EventBus.instance.onceEvent({
+            event: llmEvents["llm.response.generated"],
+            correlationId: llmRequestCorrelationId,
+            callback: async (
+              llmResponseGeneratedEventData: LlmResponseGeneratedEventData
+            ) => {
+              try {
+                const updatedTopic = await this.topicRepository.updateTopic({
+                  topicId: topic.id,
+                  accessToken: topicCreateEventData.payload.accessToken,
+                  title: llmResponseGeneratedEventData.payload.content,
+                });
+
+                EventBus.instance.emitEvent({
+                  event: topicEvents["topic.updated"],
+                  correlationId: topicCreateRequestorCorrelationId,
+                  data: TopicUpdatedEventData.from({
+                    id: updatedTopic.id,
+                    title: updatedTopic.title,
+                    userId: updatedTopic.userId,
+                  }),
+                });
+              } catch (updateError) {
+                console.error(
+                  "Failed to update topic title after LLM generation:",
+                  updateError
+                );
+              }
+            },
+          });
+
+          EventBus.instance.emitEvent({
+            event: llmEvents["llm.response.requested"],
+            correlationId: llmRequestCorrelationId,
+            data: LlmResponseRequestedEventData.from({
+              model: "gpt-4o-mini",
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "Generate a concise (5 words or less) title for the following user message. Output only the title text.",
+                },
+                {
+                  role: "user",
+                  content: topicCreateEventData.payload.newMessageContent,
+                },
+              ],
+            }),
+          });
         } catch (error) {
+          console.error(
+            "Failed to create topic or initiate title generation:",
+            error
+          );
           if (error instanceof TopicError) {
             throw error;
           }
@@ -86,17 +160,20 @@ export class TopicService {
     // Handle topic update request
     EventBus.instance.onEvent({
       event: topicEvents["topic.update"],
-      callback: async (event: TopicUpdateEventData) => {
+      callback: async (
+        event: TopicUpdateEventData,
+        topicUpdateRequestorCorrelationId
+      ) => {
         try {
-          const topic = await this.topicRepository.updateTopic(
-            event.payload.accessToken,
-            event.payload.id,
-            event.payload.title
-          );
+          const topic = await this.topicRepository.updateTopic({
+            accessToken: event.payload.accessToken,
+            topicId: event.payload.id,
+            title: event.payload.title,
+          });
 
           EventBus.instance.emitEvent({
             event: topicEvents["topic.updated"],
-            correlationId: event.payload.id, // Change this to userID.
+            correlationId: topicUpdateRequestorCorrelationId,
             data: TopicUpdatedEventData.from({
               id: topic.id,
               title: topic.title,
@@ -115,16 +192,19 @@ export class TopicService {
     // Handle topic deletion request
     EventBus.instance.onEvent({
       event: topicEvents["topic.delete"],
-      callback: async (event: TopicDeleteEventData) => {
+      callback: async (
+        event: TopicDeleteEventData,
+        topicDeleteRequestorCorrelationId
+      ) => {
         try {
-          await this.topicRepository.deleteTopic(
-            event.payload.accessToken,
-            event.payload.id
-          );
+          await this.topicRepository.deleteTopic({
+            accessToken: event.payload.accessToken,
+            topicId: event.payload.id,
+          });
 
           EventBus.instance.emitEvent({
             event: topicEvents["topic.deleted"],
-            correlationId: event.payload.userId,
+            correlationId: topicDeleteRequestorCorrelationId,
             data: TopicDeletedEventData.from({
               id: event.payload.id,
               userId: event.payload.userId,
@@ -143,15 +223,15 @@ export class TopicService {
     });
   }
 
-  async createTopic(access_token: string, userId: string, title: string) {
-    return this.topicRepository.createTopic(access_token, userId, title);
+  async createTopic(accessToken: string, userId: string, title: string) {
+    return this.topicRepository.createTopic({ accessToken, userId, title });
   }
 
-  async getTopic(access_token: string, topicId: string) {
-    return this.topicRepository.getTopic(access_token, topicId);
+  async getTopic(accessToken: string, topicId: string) {
+    return this.topicRepository.getTopic({ accessToken, topicId });
   }
 
-  async listTopics(access_token: string, userId: string) {
-    return this.topicRepository.listTopics(access_token, userId);
+  async listTopics(accessToken: string, userId: string) {
+    return this.topicRepository.listTopics({ accessToken, userId });
   }
 }

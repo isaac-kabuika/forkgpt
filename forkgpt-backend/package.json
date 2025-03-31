@@ -33,7 +33,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "firebase-admin": "^13.0.2",
-    "forkgpt-api-types": "file:../forkgpt-api-types/forkgpt-api-types-1.0.36.tgz",
+    "forkgpt-api-types": "file:../forkgpt-api-types/forkgpt-api-types-1.0.38.tgz",
     "openai": "^4.77.0",
     "safe-event": "^1.1.1",
     "zod": "^3.24.1"

@@ -57,12 +57,12 @@
           "userId": {
             "type": "string"
           },
-          "title": {
+          "newMessageContent": {
             "type": "string"
           },
           "accessToken": { "type": "string" }
         },
-        "required": ["userId", "title", "accessToken"],
+        "required": ["userId", "title", "accessToken", "newMessageContent"],
         "additionalProperties": false
       }
     },

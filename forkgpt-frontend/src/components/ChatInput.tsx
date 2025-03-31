@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useCreateMessage } from "../server-state/message.hooks";
 import { useCreateThread } from "../server-state/thread.hooks";
-import { useAppSelector, useAppDispatch } from "../client-state/hooks";
+import { useAppSelector } from "../client-state/hooks";
 import { useCreateTopic } from "../server-state/topic.hooks";
-import { useQueryParams } from "../client-state/useQueryParams";
 import * as Api from "forkgpt-api-types";
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
@@ -24,8 +23,6 @@ export function ChatInput() {
   );
   const { mutateAsync: createTopicAsync, isPending: isCreatingTopic } =
     useCreateTopic();
-  const { setThreadId } = useQueryParams();
-  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -43,7 +40,7 @@ export function ChatInput() {
 
     if (!topicIdToUse) {
       try {
-        const newTopic: Api.Topic = await createTopicAsync();
+        const newTopic: Api.Topic = await createTopicAsync(trimmedContent);
         topicIdToUse = newTopic.id;
       } catch (error) {
         console.error("Failed to create topic:", error);

@@ -1,6 +1,6 @@
 {
   "name": "forkgpt-api-types",
-  "version": "1.0.36",
+  "version": "1.0.38",
   "description": "API Contracts for ForkGPT",
   "scripts": {
     "build": "tsc",

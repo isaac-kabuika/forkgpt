@@ -13,7 +13,7 @@ export type Topic = z.infer<typeof topicSchema>;
 
 // Request/Response types
 export const createTopicRequestSchema = z.object({
-  title: z.string().min(1),
+  newMessageContent: z.string().min(1),
 });
 export type CreateTopicRequest = z.infer<typeof createTopicRequestSchema>;
 

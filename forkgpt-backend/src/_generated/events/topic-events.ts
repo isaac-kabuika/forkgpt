@@ -66,7 +66,7 @@ export class TopicListFetchedEventData {
 }
 
 
-const TopicCreateSchema = z.object({ "userId": z.string(), "title": z.string(), "accessToken": z.string() }).strict();
+const TopicCreateSchema = z.object({ "userId": z.string(), "newMessageContent": z.string(), "accessToken": z.string() }).strict();
 
 export type TopicCreateEventPayload = z.infer<typeof TopicCreateSchema>;
 

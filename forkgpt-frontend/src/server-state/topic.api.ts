@@ -20,8 +20,7 @@ export const topicApi = {
     return response.data.topic;
   },
 
-  createTopic: async () => {
-    const data = Api.createTopicRequestSchema.parse({ title: "test" });
+  createTopic: async (data: Api.CreateTopicRequest) => {
     const response = await api.post<Api.TopicResponse>("/topics", data);
     return response.data.topic;
   },

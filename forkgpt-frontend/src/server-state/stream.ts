@@ -3,8 +3,10 @@ import store from "../client-state/store";
 import { queryClient } from "./queryClient";
 import { messageKeys } from "./message.api";
 import { threadKeys } from "./thread.api";
+import { topicKeys } from "./topic.api";
 import * as Api from "forkgpt-api-types";
 import { mapThread } from "../models/thread.model";
+import { mapTopic } from "../models/topic.model";
 
 let ablyClient: Realtime | null = null;
 let channel: RealtimeChannel | Channel;
@@ -94,6 +96,28 @@ const initializeStreamListener = () => {
         queryClient.setQueryData(
           threadKeys.detail(updatedThread.id),
           updatedThread
+        );
+      });
+
+      channel.subscribe(Api.ably.EventName.TOPIC_UPDATED, (ablyMessage) => {
+        const data: Api.ably.TopicUpdated = ablyMessage.data;
+        const updatedTopic = mapTopic(data.topic);
+
+        queryClient.setQueryData<Api.Topic[]>(topicKeys.lists(), (oldData) => {
+          if (!oldData) return [updatedTopic];
+          const topicExists = oldData.some(
+            (topic) => topic.id === updatedTopic.id
+          );
+          return topicExists
+            ? oldData.map((topic) =>
+                topic.id === updatedTopic.id ? updatedTopic : topic
+              )
+            : [...oldData, updatedTopic];
+        });
+
+        queryClient.setQueryData(
+          topicKeys.detail(updatedTopic.id),
+          updatedTopic
         );
       });
 
