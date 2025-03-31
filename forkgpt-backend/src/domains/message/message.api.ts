@@ -68,10 +68,25 @@ export function initMessageApi(app: Application) {
   // Create message
   app.post(
     "/api/topics/:topicId/messages",
-    async (req: Request, res: Response) => {
+    async (req: Request, res: Response, next) => {
       try {
         const createData = ApiType.createMessageRequestSchema.parse(req.body);
         const requestorCorrelationId = randomUUID();
+
+        if (!createData.threadId) {
+          const newThreadPath = `/api/topics/${req.params.topicId}/threads`;
+          const newThreadData = ApiType.createThreadRequestSchema.parse({
+            name: "Tab",
+            newMessageContent: createData.content,
+            leafMessageId: null,
+            leftThreadId: null,
+            rightThreadId: null,
+          } as ApiType.CreateThreadRequest);
+          req.body = newThreadData;
+          req.url = newThreadPath;
+          next("route");
+          return;
+        }
 
         const aiResponseChunkListener = EventBus.instance.onEvent({
           event: messageEvents["message.aiResponse.partialMessage"],

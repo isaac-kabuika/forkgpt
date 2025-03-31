@@ -9,13 +9,19 @@ export class SupabaseMessageRepository implements MessageRepository {
     message: Omit<Message, "id" | "createdAt" | "updatedAt" | "parentId">,
     threadId: string | null
   ): Promise<Message> {
+    if (!threadId)
+      return this.createMessage(access_token, { ...message, parentId: null });
     const { data: threadData, error: threadError } = await Supabase.client
       .from("threads")
       .select()
       .eq("id", threadId)
       .single<Tables<"threads">>()
       .setHeader("Authorization", `Bearer ${access_token}`);
-    if (threadError) throw threadError;
+    if (threadError)
+      throw new MessageError(
+        MessageErrorCode.DATABASE_ERROR,
+        threadError.message
+      );
     return this.createMessage(access_token, {
       ...message,
       parentId: threadData?.leaf_message_id ?? null,
@@ -48,8 +54,7 @@ export class SupabaseMessageRepository implements MessageRepository {
       .setHeader("Authorization", `Bearer ${access_token}`);
 
     if (error) {
-      console.error(error);
-      throw error;
+      throw new MessageError(MessageErrorCode.DATABASE_ERROR, error.message);
     }
 
     return this.mapDbMessageToDomain(data);
@@ -59,21 +64,19 @@ export class SupabaseMessageRepository implements MessageRepository {
     access_token: string,
     messageId: string
   ): Promise<Message | null> {
-    const { data, error } = await Supabase.client
+    const { data, error: dbError } = await Supabase.client
       .from("messages")
       .select()
       .eq("id", messageId)
       .single<Tables<"messages">>()
       .setHeader("Authorization", `Bearer ${access_token}`);
 
-    if (error) {
-      if (error.code === "PGRST116") {
+    if (dbError) {
+      if (dbError.code === "PGRST116") {
+        console.error(dbError);
         return null;
       }
-      throw new MessageError(
-        MessageErrorCode.UNAUTHORIZED,
-        "Failed to fetch message"
-      );
+      throw new MessageError(MessageErrorCode.DATABASE_ERROR, dbError.message);
     }
 
     return this.mapDbMessageToDomain(data);
@@ -93,7 +96,7 @@ export class SupabaseMessageRepository implements MessageRepository {
 
     if (error) {
       throw new MessageError(
-        MessageErrorCode.UNAUTHORIZED,
+        MessageErrorCode.DATABASE_ERROR,
         "Failed to fetch messages"
       );
     }
@@ -114,7 +117,7 @@ export class SupabaseMessageRepository implements MessageRepository {
       .setHeader("Authorization", `Bearer ${access_token}`);
 
     if (error) {
-      throw error;
+      throw new MessageError(MessageErrorCode.DATABASE_ERROR, error.message);
     }
 
     // Messages come ordered from root to leaf
@@ -136,7 +139,7 @@ export class SupabaseMessageRepository implements MessageRepository {
 
     if (error) {
       throw new MessageError(
-        MessageErrorCode.UNAUTHORIZED,
+        MessageErrorCode.DATABASE_ERROR,
         "Failed to update message"
       );
     }
@@ -154,7 +157,7 @@ export class SupabaseMessageRepository implements MessageRepository {
 
     if (error) {
       throw new MessageError(
-        MessageErrorCode.UNAUTHORIZED,
+        MessageErrorCode.DATABASE_ERROR,
         "Failed to delete message"
       );
     }

@@ -21,7 +21,10 @@ import {
   LlmResponseRequestedEventData,
 } from "../../_generated/events/llm-events";
 import { randomUUID } from "crypto";
-import { threadEvents } from "../../_generated/events/thread-events";
+import {
+  ThreadCreateEventData,
+  threadEvents,
+} from "../../_generated/events/thread-events";
 import { ThreadUpdateLeafEventData } from "../../_generated/events/thread-events";
 
 export class MessageService {

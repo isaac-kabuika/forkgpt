@@ -2,6 +2,7 @@ import { Message } from "../message/message.types";
 
 // Error types
 export enum ThreadErrorCode {
+  DATABASE_ERROR = "DATABASE_ERROR",
   UNAUTHORIZED = "UNAUTHORIZED",
   THREAD_NOT_FOUND = "THREAD_NOT_FOUND",
   INVALID_PARENT_MESSAGE = "INVALID_PARENT_MESSAGE",

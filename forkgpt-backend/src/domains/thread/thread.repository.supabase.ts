@@ -36,14 +36,20 @@ export class SupabaseThreadRepository implements ThreadRepository {
         .setHeader("Authorization", `Bearer ${accessToken}`);
 
       if (threadsError || !threads || threads.length !== 2) {
-        throw threadsError;
+        throw new ThreadError(
+          ThreadErrorCode.DATABASE_ERROR,
+          threadsError?.message ?? ""
+        );
       }
 
       const leftRank = threads.find((t) => t.id === leftThreadId)?.rank;
       const rightRank = threads.find((t) => t.id === rightThreadId)?.rank;
 
       if (!leftRank || !rightRank) {
-        throw threadsError;
+        throw new ThreadError(
+          ThreadErrorCode.DATABASE_ERROR,
+          "Failed to get ranks for adjacent threads"
+        );
       }
 
       newRank = (leftRank + rightRank) / 2;
@@ -60,7 +66,10 @@ export class SupabaseThreadRepository implements ThreadRepository {
         .setHeader("Authorization", `Bearer ${accessToken}`);
 
       if (leftError || !leftThread) {
-        throw leftError;
+        throw new ThreadError(
+          ThreadErrorCode.DATABASE_ERROR,
+          leftError?.message ?? "Failed to get left thread"
+        );
       }
       newRank = leftThread.rank + 1000;
     } else {
@@ -73,7 +82,10 @@ export class SupabaseThreadRepository implements ThreadRepository {
         .setHeader("Authorization", `Bearer ${accessToken}`);
 
       if (rightError || !rightThread) {
-        throw rightError;
+        throw new ThreadError(
+          ThreadErrorCode.DATABASE_ERROR,
+          rightError?.message ?? "Failed to get right thread"
+        );
       }
       newRank = rightThread.rank / 2;
     }
@@ -98,10 +110,7 @@ export class SupabaseThreadRepository implements ThreadRepository {
       .setHeader("Authorization", `Bearer ${accessToken}`);
 
     if (error) {
-      throw new ThreadError(
-        ThreadErrorCode.UNAUTHORIZED,
-        "Failed to create thread"
-      );
+      throw new ThreadError(ThreadErrorCode.DATABASE_ERROR, error.message);
     }
 
     return this.mapDbThreadToDomain(data);
@@ -124,8 +133,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
         return null;
       }
       throw new ThreadError(
-        ThreadErrorCode.UNAUTHORIZED,
-        "Failed to fetch thread"
+        ThreadErrorCode.DATABASE_ERROR,
+        error.message ?? "Failed to fetch thread"
       );
     }
 
@@ -153,8 +162,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
 
     if (error) {
       throw new ThreadError(
-        ThreadErrorCode.UNAUTHORIZED,
-        "Failed to fetch messages"
+        ThreadErrorCode.DATABASE_ERROR,
+        error.message ?? "Failed to fetch messages"
       );
     }
     // Messages come ordered from root to leaf
@@ -176,8 +185,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
 
     if (error) {
       throw new ThreadError(
-        ThreadErrorCode.UNAUTHORIZED,
-        "Failed to list threads"
+        ThreadErrorCode.DATABASE_ERROR,
+        error.message ?? "Failed to list threads"
       );
     }
 
@@ -214,8 +223,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
 
         if (leftError || !leftThread) {
           throw new ThreadError(
-            ThreadErrorCode.THREAD_NOT_FOUND,
-            "Left thread not found"
+            ThreadErrorCode.DATABASE_ERROR,
+            leftError?.message ?? "Failed to get left thread"
           );
         }
         newRank = leftThread.rank + 1000;
@@ -229,8 +238,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
 
         if (rightError || !rightThread) {
           throw new ThreadError(
-            ThreadErrorCode.THREAD_NOT_FOUND,
-            "Right thread not found"
+            ThreadErrorCode.DATABASE_ERROR,
+            rightError?.message ?? "Failed to get right thread"
           );
         }
         newRank = rightThread.rank / 2;
@@ -244,8 +253,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
 
         if (threadsError || !threads || threads.length !== 2) {
           throw new ThreadError(
-            ThreadErrorCode.THREAD_NOT_FOUND,
-            "Adjacent threads not found"
+            ThreadErrorCode.DATABASE_ERROR,
+            "Failed to get ranks for adjacent threads"
           );
         }
 
@@ -258,8 +267,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
 
         if (!leftRank || !rightRank) {
           throw new ThreadError(
-            ThreadErrorCode.THREAD_NOT_FOUND,
-            "Adjacent threads not found"
+            ThreadErrorCode.DATABASE_ERROR,
+            "Failed to get ranks for adjacent threads"
           );
         }
 
@@ -282,8 +291,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
 
     if (error) {
       throw new ThreadError(
-        ThreadErrorCode.UNAUTHORIZED,
-        "Failed to update thread"
+        ThreadErrorCode.DATABASE_ERROR,
+        error.message ?? "Failed to update thread"
       );
     }
 
@@ -303,8 +312,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
 
     if (error) {
       throw new ThreadError(
-        ThreadErrorCode.UNAUTHORIZED,
-        "Failed to delete thread"
+        ThreadErrorCode.DATABASE_ERROR,
+        error.message ?? "Failed to delete thread"
       );
     }
   }
@@ -325,8 +334,8 @@ export class SupabaseThreadRepository implements ThreadRepository {
 
     if (error) {
       throw new ThreadError(
-        ThreadErrorCode.UNAUTHORIZED,
-        "Failed to update thread leaf"
+        ThreadErrorCode.DATABASE_ERROR,
+        error.message ?? "Failed to update thread leaf"
       );
     }
 

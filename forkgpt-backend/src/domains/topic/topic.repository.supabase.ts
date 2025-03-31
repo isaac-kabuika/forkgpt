@@ -17,8 +17,7 @@ export class SupabaseTopicRepository implements TopicRepository {
       .setHeader("Authorization", `Bearer ${access_token}`);
 
     if (error) {
-      console.error(error);
-      throw error;
+      throw new TopicError(TopicErrorCode.DATABASE_ERROR, error.message);
     }
 
     return this.mapDbTopicToDomain(data as Tables<"topics">);
@@ -36,10 +35,7 @@ export class SupabaseTopicRepository implements TopicRepository {
       if (error.code === "PGRST116") {
         return null;
       }
-      throw new TopicError(
-        TopicErrorCode.UNAUTHORIZED,
-        "Failed to fetch topic"
-      );
+      throw new TopicError(TopicErrorCode.DATABASE_ERROR, error.message);
     }
 
     return this.mapDbTopicToDomain(data);
@@ -59,10 +55,7 @@ export class SupabaseTopicRepository implements TopicRepository {
       .setHeader("Authorization", `Bearer ${access_token}`);
 
     if (error) {
-      throw new TopicError(
-        TopicErrorCode.UNAUTHORIZED,
-        "Failed to update topic"
-      );
+      throw new TopicError(TopicErrorCode.DATABASE_ERROR, error.message);
     }
 
     return this.mapDbTopicToDomain(data);
@@ -77,10 +70,7 @@ export class SupabaseTopicRepository implements TopicRepository {
       .setHeader("Authorization", `Bearer ${access_token}`);
 
     if (error) {
-      throw new TopicError(
-        TopicErrorCode.UNAUTHORIZED,
-        "Failed to delete topic"
-      );
+      throw new TopicError(TopicErrorCode.DATABASE_ERROR, error.message);
     }
   }
 
@@ -94,10 +84,7 @@ export class SupabaseTopicRepository implements TopicRepository {
       .setHeader("Authorization", `Bearer ${access_token}`);
 
     if (error) {
-      throw new TopicError(
-        TopicErrorCode.UNAUTHORIZED,
-        "Failed to list topics"
-      );
+      throw new TopicError(TopicErrorCode.DATABASE_ERROR, error.message);
     }
 
     return data.map(this.mapDbTopicToDomain);
