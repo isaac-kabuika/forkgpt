@@ -1,8 +1,4 @@
-import {
-  useTopics,
-  useCreateTopic,
-  useDeleteTopic,
-} from "../server-state/topic.hooks";
+import { useTopics, useDeleteTopic } from "../server-state/topic.hooks";
 import { useAppSelector, useAppDispatch } from "../client-state/hooks";
 import {
   PlusIcon,
@@ -12,6 +8,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { setActiveTopic } from "../client-state/slices/topicSlice";
 import { useQueryParams } from "../client-state/useQueryParams";
+import { useNavigate } from "react-router-dom";
+import { setActiveThread } from "../client-state/slices/threadSlice";
 
 function classNames(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
@@ -24,15 +22,23 @@ interface TopicListProps {
 
 export function TopicList({ isCollapsed, onToggleCollapse }: TopicListProps) {
   const { data: topics, isLoading } = useTopics();
-  const { mutate: createTopic } = useCreateTopic();
   const { mutate: deleteTopic } = useDeleteTopic();
   const activeTopicId = useAppSelector((state) => state.topic.activeTopicId);
   const dispatch = useAppDispatch();
-  const { setTopicId } = useQueryParams();
+  const { setTopicId, setThreadId } = useQueryParams();
+  const navigate = useNavigate();
 
   const handleTopicClick = (topicId: string) => {
     dispatch(setActiveTopic(topicId));
     setTopicId(topicId);
+  };
+
+  const createTopic = () => {
+    dispatch(setActiveThread(null));
+    setThreadId(null);
+    dispatch(setActiveTopic(null));
+    setTopicId(null);
+    navigate("/");
   };
 
   if (isLoading) {

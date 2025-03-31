@@ -4,6 +4,7 @@ import { useAppDispatch } from "../client-state/hooks";
 import { setActiveTopic } from "../client-state/slices/topicSlice";
 import { mapTopic } from "../models/topic.model";
 import * as Api from "forkgpt-api-types";
+import { useQueryParams } from "../client-state/useQueryParams";
 
 export function useTopics() {
   return useQuery({
@@ -29,6 +30,7 @@ export function useTopic(id: string) {
 export function useCreateTopic() {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
+  const { setTopicId } = useQueryParams();
 
   return useMutation({
     mutationFn: topicApi.createTopic,
@@ -39,8 +41,9 @@ export function useCreateTopic() {
         newTopic,
       ]);
 
-      // Set as active topic
+      // Set the active topic immediately
       dispatch(setActiveTopic(newTopic.id));
+      setTopicId(newTopic.id);
     },
   });
 }

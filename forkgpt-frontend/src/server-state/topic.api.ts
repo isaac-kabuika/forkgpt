@@ -4,6 +4,7 @@ import { api } from "./api";
 export const topicKeys = {
   all: ["topics"] as const,
   lists: () => [...topicKeys.all] as const,
+  list: (topicId: string) => [...topicKeys.lists(), topicId] as const,
   detail: (id: string) => [...topicKeys.all, id] as const,
   tree: (id: string) => [...topicKeys.all, id, "tree"] as const,
 };
